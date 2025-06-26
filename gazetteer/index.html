@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Gazetteer - World Country Explorer | IT Career Switch</title>
+    <meta name="author" content="">
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <link rel="icon" href="favicon.png">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/leaflet.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Preloader -->
+    <div id="preloader"></div>
+
+    <!-- Navigation Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="icon-globe"></i>
+                Gazetteer
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav me-auto">
+                    <select class="form-select country-select" id="countrySelect">
+                        <option value="">Select a country...</option>
+                    </select>
+                </div>
+                
+                <div class="navbar-nav">
+                    <div class="search-container">
+                        <input type="text" class="form-control search-input" id="searchInput" placeholder="Search countries...">
+                        <button class="btn search-btn" id="searchBtn">
+                            <i class="icon-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Map Container -->
+        <div id="map" class="map-container"></div>
+        
+        <!-- Mobile Info Panel -->
+        <div class="mobile-info-panel" id="mobileInfoPanel">
+            <div class="info-header">
+                <h5 id="mobileCountryName">Select a country</h5>
+                <button class="btn-close" id="closeMobilePanel"></button>
+            </div>
+            <div class="info-content" id="mobileInfoContent">
+                <p>Click on a country or search to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Country Information Modal -->
+    <div class="modal fade" id="countryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="country-header">
+                        <img id="countryFlag" class="country-flag" src="" alt="Flag">
+                        <div class="country-title">
+                            <h4 class="modal-title" id="countryName">Country Name</h4>
+                            <p class="country-subtitle" id="countrySubtitle">Capital • Region</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Navigation Tabs -->
+                    <ul class="nav nav-tabs" id="countryTabs">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview">Overview</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather">Weather</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="currency-tab" data-bs-toggle="tab" data-bs-target="#currency">Currency</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="languages-tab" data-bs-toggle="tab" data-bs-target="#languages">Languages</button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="countryTabContent">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="overview">
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <div class="info-label">Population</div>
+                                    <div class="info-value" id="countryPopulation">Loading...</div>
+                                </div>
+                                <div class="info-card">
+                                    <div class="info-label">Area</div>
+                                    <div class="info-value" id="countryArea">Loading...</div>
+                                </div>
+                                <div class="info-card">
+                                    <div class="info-label">Capital</div>
+                                    <div class="info-value" id="countryCapital">Loading...</div>
+                                </div>
+                                <div class="info-card">
+                                    <div class="info-label">Region</div>
+                                    <div class="info-value" id="countryRegion">Loading...</div>
+                                </div>
+                                <div class="info-card">
+                                    <div class="info-label">Subregion</div>
+                                    <div class="info-value" id="countrySubregion">Loading...</div>
+                                </div>
+                                <div class="info-card">
+                                    <div class="info-label">Coordinates</div>
+                                    <div class="info-value" id="countryCoords">Loading...</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Weather Tab -->
+                        <div class="tab-pane fade" id="weather">
+                            <div class="weather-container">
+                                <div class="weather-current">
+                                    <div class="weather-icon">
+                                        <img id="weatherIcon" src="" alt="Weather">
+                                    </div>
+                                    <div class="weather-details">
+                                        <div class="temperature" id="weatherTemp">--°C</div>
+                                        <div class="weather-desc" id="weatherDesc">Loading weather...</div>
+                                        <div class="feels-like" id="weatherFeels">Feels like --°C</div>
+                                    </div>
+                                </div>
+                                <div class="weather-stats">
+                                    <div class="weather-stat">
+                                        <span class="stat-label">Humidity</span>
+                                        <span class="stat-value" id="weatherHumidity">--%</span>
+                                    </div>
+                                    <div class="weather-stat">
+                                        <span class="stat-label">Pressure</span>
+                                        <span class="stat-value" id="weatherPressure">-- hPa</span>
+                                    </div>
+                                    <div class="weather-stat">
+                                        <span class="stat-label">Wind Speed</span>
+                                        <span class="stat-value" id="weatherWind">-- m/s</span>
+                                    </div>
+                                    <div class="weather-stat">
+                                        <span class="stat-label">Visibility</span>
+                                        <span class="stat-value" id="weatherVisibility">-- km</span>
+                                    </div>
+                                </div>
+                                <div class="weather-time" id="weatherTime">Last updated: --</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Currency Tab -->
+                        <div class="tab-pane fade" id="currency">
+                            <div class="currency-container">
+                                <div class="currency-info">
+                                    <h6>Currency Information</h6>
+                                    <div class="currency-details" id="currencyDetails">
+                                        Loading currency information...
+                                    </div>
+                                </div>
+                                <div class="currency-converter">
+                                    <h6>Currency Converter</h6>
+                                    <div class="converter-form">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="convertAmount" placeholder="Amount" value="1">
+                                            <select class="form-select" id="fromCurrency">
+                                                <option value="USD">USD</option>
+                                            </select>
+                                        </div>
+                                        <div class="convert-arrow">
+                                            <button class="btn btn-outline-primary btn-sm" id="swapCurrencies">
+                                                <i class="icon-swap"></i>
+                                            </button>
+                                        </div>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="convertResult" readonly>
+                                            <select class="form-select" id="toCurrency">
+                                                <option value="EUR">EUR</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Languages Tab -->
+                        <div class="tab-pane fade" id="languages">
+                            <div class="languages-container">
+                                <h6>Official Languages</h6>
+                                <div class="languages-list" id="languagesList">
+                                    Loading language information...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="viewOnMapBtn">View on Map</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="searchResults">
+                        <p>Search for countries by name, region, or ISO code...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner Component -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/leaflet.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
