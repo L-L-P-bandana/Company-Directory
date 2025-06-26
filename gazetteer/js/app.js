@@ -980,8 +980,7 @@ function showToastNotification(message, type = 'info') {
     const toastClass = type === 'error' ? 'alert-danger' : 'alert-info';
     
     const toastHtml = `
-        <div id="${toastId}" class="alert ${toastClass} alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+        <div id="${toastId}" class="alert ${toastClass} alert-dismissible fade show position-fixed toast-notification-positioned">
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -1076,7 +1075,7 @@ function showSearchSuggestions(query) {
         <div class="search-suggestion-item p-2" data-country-code="${country.code}">
             <div class="d-flex align-items-center">
                 <img src="${country.flag}" alt="${country.name} flag" 
-                     class="me-2" style="width: 24px; height: 18px; object-fit: cover; border-radius: 2px;">
+                     class="me-2 search-suggestion-flag">
                 <div class="flex-grow-1">
                     <div class="fw-bold small">${country.name}</div>
                     <div class="text-muted" style="font-size: 0.75rem;">${country.capital || 'N/A'} • ${country.region}</div>
@@ -1090,8 +1089,7 @@ function showSearchSuggestions(query) {
     let $dropdown = $('#searchSuggestions');
     if ($dropdown.length === 0) {
         $dropdown = $(`
-            <div id="searchSuggestions" class="search-suggestions-dropdown position-absolute bg-white border rounded shadow-sm" 
-                 style="top: 100%; left: 0; right: 0; z-index: 1000; max-height: 300px; overflow-y: auto;">
+            <div id="searchSuggestions" class="search-suggestions-dropdown position-absolute bg-white border rounded shadow-sm search-suggestions-dropdown-positioned">
             </div>
         `);
         $('.search-container').css('position', 'relative').append($dropdown);
@@ -1179,8 +1177,7 @@ function displaySearchResults(results) {
             <div class="d-flex align-items-center">
                 <img src="${country.flag_png || country.flag || `https://flagcdn.com/w40/${(country.iso_code_2 || country.code || '').toLowerCase()}.png`}" 
                      alt="${country.name_common || country.name} flag" 
-                     class="search-result-flag me-3" 
-                     style="width: 40px; height: 30px; object-fit: cover; border-radius: 4px;">
+                     class="search-result-flag me-3 search-result-flag-image">
                 <div class="search-result-info flex-grow-1">
                     <div class="search-result-name fw-bold">${country.name_common || country.name}</div>
                     <div class="search-result-details text-muted small">
@@ -1335,308 +1332,6 @@ function getUserLocation() {
 /* APPLICATION INITIALIZATION */
 /* ========================================================================== */
 
-/* ========================================================================== */
-/* INITIALIZATION AND CSS INJECTION */
-/* ========================================================================== */
-
-/**
- * Inject enhanced styling for better visibility and layout
- */
-function injectSubtleLoadingStyles() {
-    const styles = `
-        <style id="subtle-loading-styles">
-        /* Subtle loading indicators */
-        .modal-title.loading::after {
-            content: '';
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            margin-left: 10px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #007bff;
-            border-radius: 50%;
-            animation: subtle-spin 1s linear infinite;
-            vertical-align: middle;
-        }
-
-        @keyframes subtle-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Toast notifications */
-        .alert.position-fixed {
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: none;
-        }
-
-        /* Search suggestions dropdown */
-        .search-suggestions-dropdown {
-            border: 1px solid #dee2e6 !important;
-            border-top: none !important;
-            border-radius: 0 0 0.375rem 0.375rem !important;
-            background: white !important;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-        }
-
-        .search-suggestion-item {
-            cursor: pointer;
-            border-bottom: 1px solid #f8f9fa;
-            transition: background-color 0.15s ease;
-        }
-
-        .search-suggestion-item:hover {
-            background-color: #f8f9fa !important;
-        }
-
-        .search-suggestion-item:last-child {
-            border-bottom: none;
-        }
-
-        /* Search container positioning */
-        .search-container {
-            position: relative;
-        }
-
-        /* Enhanced search input */
-        .search-input:focus + .search-btn {
-            border-color: #86b7fe;
-        }
-
-        /* Search result improvements */
-        .search-result-item {
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .search-result-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        /* WEATHER DISPLAY IMPROVEMENTS */
-        .weather-container {
-            color: #333 !important;
-        }
-
-        .weather-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
-            border-radius: 0.5rem;
-            border: 1px solid #e0e0e0;
-        }
-
-        .weather-main .display-4 {
-            color: #1976d2 !important;
-            font-weight: 700;
-            margin: 0;
-            line-height: 1;
-        }
-
-        .weather-main .text-muted {
-            color: #666 !important;
-            font-size: 0.9rem;
-        }
-
-        .weather-desc .fs-5 {
-            color: #333 !important;
-            font-weight: 500;
-            margin: 0;
-        }
-
-        .weather-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .weather-detail {
-            background: #f8f9fa;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            border: 1px solid #e9ecef;
-            text-align: center;
-            transition: transform 0.2s ease;
-        }
-
-        .weather-detail:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .weather-detail strong {
-            color: #333 !important;
-            font-size: 1.1rem;
-            display: block;
-            margin: 0.25rem 0;
-        }
-
-        .weather-detail .text-muted {
-            color: #666 !important;
-            font-size: 0.8rem;
-        }
-
-        .weather-detail i {
-            font-style: normal;
-            font-size: 1.3em;
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-
-        /* CURRENCY STYLING IMPROVEMENTS */
-        .currency-container {
-            color: #333 !important;
-        }
-
-        .currency-info {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid #e0e0e0;
-            margin-bottom: 1.5rem;
-        }
-
-        .currency-info h6 {
-            color: #333 !important;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-        }
-
-        .currency-item {
-            color: #333 !important;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .currency-item:last-child {
-            border-bottom: none;
-        }
-
-        .currency-item strong {
-            color: #1976d2 !important;
-        }
-
-        .currency-item .text-muted {
-            color: #666 !important;
-        }
-
-        .currency-converter {
-            background: #ffffff;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid #e0e0e0;
-        }
-
-        .currency-converter h6 {
-            color: #333 !important;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        /* CURRENCY DROPDOWN SIZING FIX */
-        .currency-converter .form-select {
-            min-width: 120px !important;
-            width: auto !important;
-            flex: 0 0 120px !important;
-        }
-
-        .currency-converter .input-group {
-            display: flex !important;
-            align-items: center !important;
-        }
-
-        .currency-converter .form-control {
-            flex: 1 1 auto !important;
-            min-width: 0 !important;
-        }
-
-        .rate-info {
-            color: #666 !important;
-            text-align: center;
-            margin-top: 0.5rem;
-        }
-
-        /* LANGUAGE STYLING IMPROVEMENTS */
-        .languages-container {
-            color: #333 !important;
-        }
-
-        .languages-container h6 {
-            color: #333 !important;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .language-item {
-            background: #f8f9fa;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            border: 1px solid #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .language-item strong {
-            color: #333 !important;
-        }
-
-        .language-item .text-muted {
-            color: #666 !important;
-        }
-
-        .badge.bg-primary {
-            background-color: #1976d2 !important;
-        }
-
-        /* MODAL TEXT IMPROVEMENTS */
-        .modal-body {
-            color: #333 !important;
-        }
-
-        .modal-body .text-muted {
-            color: #666 !important;
-        }
-
-        .modal-body p {
-            color: #333 !important;
-        }
-
-        /* INFO GRID IMPROVEMENTS */
-        .info-card .info-value {
-            color: #333 !important;
-            font-weight: 600;
-        }
-
-        .info-card .info-label {
-            color: #666 !important;
-        }
-
-        /* GENERAL TEXT CONTRAST FIXES */
-        .text-danger {
-            color: #dc3545 !important;
-        }
-
-        .text-success {
-            color: #198754 !important;
-        }
-
-        .text-primary {
-            color: #1976d2 !important;
-        }
-        </style>
-    `;
-    
-    // Only inject if not already present
-    if (!$('#subtle-loading-styles').length) {
-        $('head').append(styles);
-    }
-}
-
 /**
  * Initialize the application
  */
@@ -1649,9 +1344,6 @@ async function initializeApp() {
     try {
         debugLog.timing('Application Initialization');
         debugLog.info('Starting application initialization...');
-        
-        // Inject CSS styles for subtle loading
-        injectSubtleLoadingStyles();
         
         // Initialize country service
         countryService = new CountryService();
