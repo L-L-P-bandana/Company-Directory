@@ -526,26 +526,42 @@ function populateWeatherData(weather) {
                 `);
             });
             
-            // Wind direction
+            // Wind direction handling - need to distinguish null from valid 0° readings
             const windDir = weather.wind_direction;
             let windDirectionText = 'N/A';
+            let windDegreeText = 'Direction';
             
+            // Check for actual values vs null - 0° is valid (North direction)
             if (windDir !== null && windDir !== undefined) {
                 const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
                 const index = Math.round(windDir / 22.5) % 16;
                 windDirectionText = directions[index];
+                windDegreeText = `${windDir}°`;
             }
             
             $('#weatherWindDir').html(`
                 <i>🧭</i>
                 <strong>${windDirectionText}</strong>
-                <small class="text-muted d-block">${windDir ? `${windDir}°` : 'Direction'}</small>
+                <small class="text-muted d-block">${windDegreeText}</small>
             `);
             
+            // Visibility handling - convert to readable format and handle nulls properly
             const visibility = weather.visibility;
+            let visibilityText = 'N/A';
+            
+            // Check for actual values - 0m visibility is technically valid
+            if (visibility !== null && visibility !== undefined) {
+                // Convert meters to kilometers for better readability
+                if (visibility >= 1000) {
+                    visibilityText = `${(visibility / 1000).toFixed(1)} km`;
+                } else {
+                    visibilityText = `${visibility} m`;
+                }
+            }
+            
             $('#weatherVisibility').html(`
                 <i>👁️</i>
-                <strong>${visibility ? `${(visibility / 1000).toFixed(1)} km` : 'N/A'}</strong>
+                <strong>${visibilityText}</strong>
                 <small class="text-muted d-block">Visibility</small>
             `);
             
