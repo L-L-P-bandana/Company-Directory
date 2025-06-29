@@ -14,10 +14,21 @@ $config = [
 // Exchange Rate API configuration
 $EXCHANGE_API_BASE = 'https://api.exchangerate-api.com/v4/latest/';
 $BASE_CURRENCY = 'USD'; // Base currency for rates
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exchange Rates Update</title>
+    <link rel="stylesheet" href="../css/db-setup-files_style.css">
+</head>
+<body>
 
-echo "<h1>💱 Exchange Rates Update from ExchangeRate-API</h1>";
-echo "<hr>";
+<h1>💱 Exchange Rates Update from ExchangeRate-API</h1>
+<hr>
 
+<?php
 try {
     // Connect to database
     $pdo = new PDO(
@@ -42,7 +53,7 @@ try {
     $todayRatesCount = $existingRates->fetchColumn();
     
     if ($todayRatesCount > 0) {
-        echo "<div style='background: #d1ecf1; padding: 15px; border: 1px solid #bee5eb; border-radius: 5px;'>";
+        echo "<div class='info-box'>";
         echo "ℹ️ <strong>RATES ALREADY UPDATED TODAY</strong><br>";
         echo "Found $todayRatesCount exchange rates for today.<br>";
         echo "Exchange rates typically update once per day.<br><br>";
@@ -170,7 +181,7 @@ try {
         WHERE base_currency = ? AND target_currency = ? AND rate_date = CURDATE()
     ");
     
-    echo "<table border='1' style='border-collapse: collapse; width: 100%;'>";
+    echo "<table class='data-table'>";
     echo "<tr><th>Currency</th><th>Rate (1 $BASE_CURRENCY =)</th><th>Inverse (1 unit =)</th></tr>";
     
     foreach ($popularCurrencies as $currency) {
@@ -201,7 +212,7 @@ try {
         LIMIT 20
     ")->fetchAll();
     
-    echo "<table border='1' style='border-collapse: collapse; width: 100%; font-size: 12px;'>";
+    echo "<table class='data-table-small'>";
     echo "<tr><th>Code</th><th>Currency</th><th>Rate</th><th>Status</th></tr>";
     
     foreach ($countryRates as $curr) {
@@ -211,17 +222,17 @@ try {
         
         if ($curr['rate']) {
             echo "<td>" . number_format($curr['rate'], 4) . "</td>";
-            echo "<td style='color: green;'>✅ Available</td>";
+            echo "<td class='success-text'>✅ Available</td>";
         } else {
             echo "<td>-</td>";
-            echo "<td style='color: orange;'>⚠️ No rate</td>";
+            echo "<td class='warning-text'>⚠️ No rate</td>";
         }
         echo "</tr>";
     }
     echo "</table>";
     
     echo "<br><hr>";
-    echo "<div style='background: #d4edda; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px;'>";
+    echo "<div class='success-box'>";
     echo "🎉 <strong>EXCHANGE RATES UPDATE COMPLETED!</strong><br>";
     echo "✅ Current exchange rates fetched and stored<br>";
     echo "✅ Database updated with today's currency rates<br>";
@@ -234,7 +245,7 @@ try {
         $pdo->rollback();
     }
     
-    echo "<div style='background: #f8d7da; padding: 15px; border: 1px solid #f5c6cb; border-radius: 5px;'>";
+    echo "<div class='error-box'>";
     echo "❌ <strong>EXCHANGE RATES UPDATE FAILED!</strong><br>";
     echo "Error: " . htmlspecialchars($e->getMessage()) . "<br><br>";
     echo "<strong>Common solutions:</strong><br>";
@@ -246,5 +257,8 @@ try {
 }
 
 echo "<br><hr>";
-echo "<p><em>Exchange rates update completed at: " . date('Y-m-d H:i:s') . "</em></p>";
+echo "<p class='footer-text'><em>Exchange rates update completed at: " . date('Y-m-d H:i:s') . "</em></p>";
 ?>
+
+</body>
+</html>

@@ -10,9 +10,20 @@ $config = [
     'username' => 'u215315340_Gazetteerllp',
     'password' => 'Rainbowunicorn1!!'
 ];
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Data Enhancement</title>
+    <link rel="stylesheet" href="../css/db-setup-files_style.css">
+</head>
+<body>
 
-echo "<h2>🔧 Batch Country Data Enhancement - Fixed Version</h2>";
+<h2>🔧 Batch Country Data Enhancement - Fixed Version</h2>
 
+<?php
 try {
     // Connect to database
     $dsn = "mysql:host={$config['host']};dbname={$config['dbname']};charset=utf8mb4";
@@ -37,7 +48,7 @@ try {
     $countries_to_enhance = $stmt->fetchAll();
     
     if (empty($countries_to_enhance)) {
-        echo "<div style='color: green; font-weight: bold;'>🎉 ALL COUNTRIES HAVE COMPLETE DATA!</div>";
+        echo "<div class='success-text'>🎉 ALL COUNTRIES HAVE COMPLETE DATA!</div>";
         
         // Show summary statistics
         $stats_sql = "SELECT 
@@ -56,11 +67,11 @@ try {
         echo "<li>With Area Data: {$stats['has_area']}</li>";
         echo "</ul>";
         
-        echo "<p><a href='api.php?request=status'>🔗 Test Your API</a></p>";
+        echo "<p><a href='api.php?request=status' class='btn-info'>🔗 Test Your API</a></p>";
         exit;
     }
     
-    echo "<div style='background: #f0f0f0; padding: 10px; margin: 10px 0;'>";
+    echo "<div class='processing-info'>";
     echo "🔍 Found " . count($countries_to_enhance) . " countries needing enhancement<br>";
     echo "📍 Processing this batch: ";
     foreach ($countries_to_enhance as $country) {
@@ -76,7 +87,7 @@ try {
     $errors = 0;
     
     foreach ($countries_to_enhance as $country) {
-        echo "<div style='margin: 10px 0; padding: 5px; border-left: 3px solid #007cba;'>";
+        echo "<div class='processing-item'>";
         echo "🌍 Processing: <strong>{$country['name_common']}</strong> ({$country['iso_code_2']})<br>";
         
         // Try to get detailed data from REST Countries API
@@ -240,12 +251,12 @@ try {
     $remaining = $pdo->query($remaining_sql)->fetch()['remaining'];
     
     if ($remaining > 0) {
-        echo "<div style='background: #e7f3ff; padding: 15px; margin: 15px 0; border: 1px solid #b3d9ff;'>";
+        echo "<div class='auto-process-box'>";
         echo "<h3>🔄 Auto-Processing Next Batch</h3>";
         echo "<p>🎯 Countries still needing enhancement: <strong>{$remaining}</strong></p>";
         echo "<p>⏰ <span id='countdown'>5</span> seconds until next batch...</p>";
-        echo "<p><button onclick='processNext()' style='background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;'>➡️ Process Now (Skip Wait)</button></p>";
-        echo "<p><button onclick='stopAuto()' style='background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;'>⏸️ Stop Auto-Processing</button></p>";
+        echo "<p><button onclick='processNext()' class='btn-process'>➡️ Process Now (Skip Wait)</button></p>";
+        echo "<p><button onclick='stopAuto()' class='btn-stop'>⏸️ Stop Auto-Processing</button></p>";
         echo "</div>";
         
         // Auto-redirect script
@@ -281,22 +292,25 @@ try {
         setTimeout(updateCountdown, 1000);
         </script>";
     } else {
-        echo "<div style='background: #d4edda; padding: 15px; margin: 15px 0; border: 1px solid #c3e6cb; color: #155724;'>";
+        echo "<div class='complete-box'>";
         echo "<h3>🎉 AUTO-ENHANCEMENT COMPLETE!</h3>";
         echo "<p>✅ All countries now have complete geographical data</p>";
         echo "<p>🎊 <strong>Fully automated enhancement successful!</strong></p>";
-        echo "<p><a href='api.php?request=country/GB' style='background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>🔗 Test Enhanced API</a></p>";
-        echo "<p><a href='api.php?request=status' style='background: #17a2b8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;'>📊 View Database Stats</a></p>";
+        echo "<p><a href='api.php?request=country/GB' class='btn-success'>🔗 Test Enhanced API</a></p>";
+        echo "<p><a href='api.php?request=status' class='btn-info'>📊 View Database Stats</a></p>";
         echo "</div>";
     }
 
 } catch (PDOException $e) {
-    echo "<div style='color: red; font-weight: bold;'>❌ DATABASE ERROR!</div>";
+    echo "<div class='error-text'>❌ DATABASE ERROR!</div>";
     echo "<p>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
 } catch (Exception $e) {
-    echo "<div style='color: red; font-weight: bold;'>❌ GENERAL ERROR!</div>";
+    echo "<div class='error-text'>❌ GENERAL ERROR!</div>";
     echo "<p>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
 }
 
-echo "<p style='margin-top: 20px; color: #666;'>Enhancement completed at: " . date('Y-m-d H:i:s') . "</p>";
+echo "<p class='footer-text'>Enhancement completed at: " . date('Y-m-d H:i:s') . "</p>";
 ?>
+
+</body>
+</html>

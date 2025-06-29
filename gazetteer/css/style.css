@@ -565,6 +565,53 @@ body {
     word-break: break-word;
 }
 
+/* Wikipedia Links */
+.wikipedia-link {
+    color: #3498db !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+    transition: var(--transition) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+}
+
+.wikipedia-link:hover {
+    color: #2980b9 !important;
+    text-decoration: underline !important;
+    transform: translateX(2px) !important;
+}
+
+.wikipedia-link.capital-wiki {
+    font-size: 0.9rem !important;
+    margin-top: 0.25rem !important;
+    color: #5dade2 !important;
+}
+
+.wikipedia-link.capital-wiki:hover {
+    color: #3498db !important;
+}
+
+/* Ensure Wikipedia links work in dark modal background */
+.modal-body .wikipedia-link {
+    color: #3498db !important;
+}
+
+.modal-body .wikipedia-link:hover {
+    color: #2980b9 !important;
+}
+
+/* Wikipedia link styling within info cards */
+.info-card .wikipedia-link {
+    color: #e8f4fd !important;
+    font-weight: 500 !important;
+}
+
+.info-card .wikipedia-link:hover {
+    color: #ffffff !important;
+    transform: translateX(3px) !important;
+}
+
 /* WEATHER */
 
 .weather-container {
@@ -1128,4 +1175,125 @@ button#swapCurrencies {
     .header, .map-container, .btn { display: none !important; }
     .modal-content { box-shadow: none !important; border: 1px solid var(--gray-300) !important; }
     body { background: var(--white) !important; }
+}
+
+.highlighted-country-border {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    transform-origin: center !important;
+    filter: drop-shadow(0 4px 12px rgba(52, 152, 235, 0.3)) !important;
+}
+
+.country-border-highlight {
+    transform: scale(1.05) !important;
+    
+    filter: drop-shadow(0 12px 32px rgba(52, 152, 235, 0.6)) 
+            drop-shadow(0 0 0 3px rgba(52, 152, 235, 0.3)) 
+            drop-shadow(0 0 20px rgba(52, 152, 235, 0.4)) !important;
+    
+    stroke-width: 5 !important;
+    stroke-dasharray: none !important;
+    
+    fill-opacity: 0.3 !important;
+    
+    animation: borderPopPulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate !important;
+}
+
+@keyframes borderPopPulse {
+    0% {
+        stroke-opacity: 0.9;
+        transform: scale(1.05);
+        filter: drop-shadow(0 12px 32px rgba(52, 152, 235, 0.6)) 
+                drop-shadow(0 0 0 3px rgba(52, 152, 235, 0.3)) 
+                drop-shadow(0 0 20px rgba(52, 152, 235, 0.4));
+    }
+    50% {
+        stroke-opacity: 1;
+        transform: scale(1.08);
+        filter: drop-shadow(0 16px 40px rgba(52, 152, 235, 0.8)) 
+                drop-shadow(0 0 0 4px rgba(52, 152, 235, 0.4)) 
+                drop-shadow(0 0 30px rgba(52, 152, 235, 0.6));
+    }
+    100% {
+        stroke-opacity: 0.9;
+        transform: scale(1.05);
+        filter: drop-shadow(0 12px 32px rgba(52, 152, 235, 0.6)) 
+                drop-shadow(0 0 0 3px rgba(52, 152, 235, 0.3)) 
+                drop-shadow(0 0 20px rgba(52, 152, 235, 0.4));
+    }
+}
+
+.highlighted-country-border path {
+    transition: inherit !important;
+    transform-origin: inherit !important;
+}
+
+.country-border-highlight path {
+    transform: inherit !important;
+    animation: inherit !important;
+}
+
+@media (max-width: 768px) {
+    .country-border-highlight {
+        transform: scale(1.03) !important;
+        
+        filter: drop-shadow(0 8px 20px rgba(52, 152, 235, 0.5)) 
+                drop-shadow(0 0 0 2px rgba(52, 152, 235, 0.2)) !important;
+    }
+    
+    @keyframes borderPopPulse {
+        0% {
+            stroke-opacity: 0.9;
+            transform: scale(1.03);
+            filter: drop-shadow(0 8px 20px rgba(52, 152, 235, 0.5));
+        }
+        50% {
+            stroke-opacity: 1;
+            transform: scale(1.05);
+            filter: drop-shadow(0 12px 28px rgba(52, 152, 235, 0.7));
+        }
+        100% {
+            stroke-opacity: 0.9;
+            transform: scale(1.03);
+            filter: drop-shadow(0 8px 20px rgba(52, 152, 235, 0.5));
+        }
+    }
+}
+
+@media (prefers-contrast: high) {
+    .highlighted-country-border {
+        filter: none !important;
+    }
+    
+    .country-border-highlight {
+        filter: none !important;
+        stroke: #000000 !important;
+        stroke-width: 4 !important;
+        fill: rgba(0, 0, 0, 0.15) !important;
+        animation: none !important;
+        transform: scale(1.03) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .highlighted-country-border,
+    .country-border-highlight {
+        transition: none !important;
+        animation: none !important;
+    }
+    
+    .country-border-highlight {
+        transform: scale(1.05) !important;
+        filter: drop-shadow(0 8px 16px rgba(52, 152, 235, 0.4)) !important;
+    }
+}
+
+.leaflet-overlay-pane svg .highlighted-country-border {
+    position: relative;
+    z-index: 1000;
+}
+
+.highlighted-country-border:hover {
+    stroke-opacity: 1 !important;
+    fill-opacity: 0.4 !important;
+    transform: scale(1.08) !important;
 }

@@ -43,6 +43,9 @@ const log = {
 let map, markersLayer, currentCountryData = null, searchTimeout;
 let apiCache = new Map(), allCountries = [], exchangeRates = {};
 let appInitialized = false, countryService;
+let countryBordersLayer = null;
+let highlightedCountryLayer = null;
+let countryBordersData = null;
 
 // Make functions globally accessible for HTML onclick events
 window.viewCountryDetails = viewCountryDetails;
@@ -241,6 +244,114 @@ class CountryService {
     }
 }
 
+async function loadCountryBorders() {
+    try {
+        log.info('Loading country borders...');
+        
+        const response = await fetch('data/countryBorders.geo.json');
+        if (!response.ok) {
+            throw new Error(`Failed to load borders: ${response.status}`);
+        }
+        
+        countryBordersData = await response.json();
+        
+        countryBordersLayer = L.geoJSON(countryBordersData, {
+            style: {
+                fillColor: 'transparent',
+                weight: 0,
+                opacity: 0,
+                fillOpacity: 0
+            }
+        });
+        
+        log.success('Country borders loaded successfully');
+        return true;
+    } catch (error) {
+        log.error('Failed to load country borders:', error);
+        return false;
+    }
+}
+
+function highlightCountryBorder(countryCode) {
+    try {
+        console.log('Trying to highlight country:', countryCode);
+        
+        if (highlightedCountryLayer) {
+            map.removeLayer(highlightedCountryLayer);
+            highlightedCountryLayer = null;
+        }
+        
+        if (!countryBordersData || !countryCode) {
+            console.log('No border data or country code');
+            return;
+        }
+        
+        console.log('Looking in', countryBordersData.features.length, 'features');
+        
+        // First tries exact ISO code matches
+        let countryFeature = countryBordersData.features.find(feature => {
+            const props = feature.properties;
+            
+            return props['ISO3166-1-Alpha-2'] === countryCode || 
+                   props['ISO3166-1-Alpha-3'] === countryCode ||
+                   props['ISO3166-1-Alpha-2'] === countryCode.toUpperCase() ||
+                   props['ISO3166-1-Alpha-3'] === countryCode.toUpperCase();
+        });
+        
+        // Fallbacks for the countries that I couldn't grab bu ISO 
+        if (!countryFeature) {
+            const countryNames = {
+                'FR': 'France',
+                'FRA': 'France',
+                'NO': 'Norway',
+                'NOR': 'Norway'
+            };
+            
+            const targetName = countryNames[countryCode.toUpperCase()];
+            
+            if (targetName) {
+                countryFeature = countryBordersData.features.find(feature => 
+                    feature.properties.name === targetName
+                );
+                
+                if (countryFeature) {
+                    console.log(`Found ${targetName} by name fallback (broken ISO codes)`);
+                }
+            }
+        }
+        
+        if (!countryFeature) {
+            console.log(`No border found for country: ${countryCode}`);
+            return;
+        }
+        
+        console.log('Found feature:', countryFeature.properties);
+        
+        highlightedCountryLayer = L.geoJSON(countryFeature, {
+            style: {
+                fillColor: '#3498db',
+                weight: 3,
+                opacity: 0.8,
+                color: '#2980b9',
+                fillOpacity: 0.2,
+                className: 'highlighted-country-border'
+            }
+        }).addTo(map);
+        
+        setTimeout(() => {
+            if (highlightedCountryLayer && highlightedCountryLayer._path) {
+                highlightedCountryLayer._path.classList.add('country-border-highlight');
+                console.log('Added highlight class');
+            }
+        }, 100);
+        
+        log.success(`Highlighted border for ${countryCode}`);
+        
+    } catch (error) {
+        console.error('Failed to highlight country border:', error);
+    }
+}
+
 /* MAP FUNCTIONS */
 function initializeMap() {
     try {
@@ -281,6 +392,8 @@ function initializeMap() {
                 if (!country) country = await countryService.findNearestCountry(lat, lng);
 
                 if (country) {
+                    markersLayer.clearLayers();
+                    
                     const marker = L.marker([lat, lng]).addTo(markersLayer);
                     marker.bindPopup(`
                         <strong>${country.name}</strong><br>
@@ -289,6 +402,8 @@ function initializeMap() {
                             View Details
                         </button>
                     `).openPopup();
+
+                    highlightCountryBorder(country.code);
 
                     await viewCountryDetails(country.code);
                 } else {
@@ -460,6 +575,19 @@ async function viewCountryDetails(countryCode) {
                 ? `${geography.latitude.toFixed(4)}, ${geography.longitude.toFixed(4)}`
                 : 'N/A'
         );
+        
+        // Wikipedia links
+        const countryName = basicInfo.name_common || basicInfo.name_official || 'Unknown';
+        const wikipediaCountryUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(countryName.replace(/ /g, '_'))}`;
+        const capitalName = basicInfo.capital;
+        const wikipediaCapitalUrl = capitalName ? `https://en.wikipedia.org/wiki/${encodeURIComponent(capitalName.replace(/ /g, '_'))}` : null;
+
+        $('#countryWikipedia').html(`
+            <a href="${wikipediaCountryUrl}" target="_blank" rel="noopener noreferrer" class="wikipedia-link">
+                📖 ${countryName}
+            </a>
+            ${wikipediaCapitalUrl ? `<br><a href="${wikipediaCapitalUrl}" target="_blank" rel="noopener noreferrer" class="wikipedia-link capital-wiki">📍 ${capitalName}</a>` : ''}
+        `);
         
         // Populate data immediately
         populateWeatherData(weather);
@@ -1068,6 +1196,8 @@ async function initializeApp() {
         
         const mapInitialized = initializeMap();
         if (!mapInitialized) throw new Error('Map initialization failed');
+        
+        await loadCountryBorders();
         
         await fetchCountries();
         await fetchExchangeRates();

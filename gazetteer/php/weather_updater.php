@@ -21,10 +21,21 @@ $BATCH_NUMBER = isset($_GET['batch']) ? (int)$_GET['batch'] : 1;
 
 // Set execution time limit
 set_time_limit(180); // 3 minutes per batch
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Data Update</title>
+    <link rel="stylesheet" href="../css/db-setup-files_style.css">
+</head>
+<body>
 
-echo "<h1>🌤️ Weather Data Update - Batch $BATCH_NUMBER</h1>";
-echo "<hr>";
+<h1>🌤️ Weather Data Update - Batch <?php echo $BATCH_NUMBER; ?></h1>
+<hr>
 
+<?php
 try {
     // Connect to database with persistent connection
     $pdo = new PDO(
@@ -73,7 +84,7 @@ try {
     echo "🎯 Total remaining countries: $totalRemaining<br><br>";
     
     if (count($countries) == 0) {
-        echo "<div style='background: #d4edda; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px;'>";
+        echo "<div class='success-box'>";
         echo "🎉 <strong>ALL WEATHER DATA IMPORTED!</strong><br>";
         echo "✅ No more countries need weather data<br>";
         echo "✅ Weather import process completed<br>";
@@ -212,14 +223,14 @@ try {
     // Show next batch button if there are more countries
     if ($totalRemaining > $BATCH_SIZE) {
         $nextBatch = $BATCH_NUMBER + 1;
-        echo "<br><div style='background: #fff3cd; padding: 15px; border: 1px solid #ffeaa7; border-radius: 5px;'>";
+        echo "<br><div class='warning-box'>";
         echo "🔄 <strong>MORE COUNTRIES TO PROCESS</strong><br>";
         echo "📊 Remaining countries: " . ($totalRemaining - $BATCH_SIZE) . "<br><br>";
-        echo "<a href='?batch=$nextBatch' style='background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>";
+        echo "<a href='?batch=$nextBatch' class='btn-primary'>";
         echo "▶️ Process Batch $nextBatch</a>";
         echo "</div>";
     } else {
-        echo "<br><div style='background: #d4edda; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px;'>";
+        echo "<br><div class='success-box'>";
         echo "🎉 <strong>WEATHER IMPORT COMPLETED!</strong><br>";
         echo "✅ All countries with weather data processed<br>";
         echo "✅ Gazetteer is now 100% complete!<br>";
@@ -227,7 +238,7 @@ try {
     }
     
 } catch (Exception $e) {
-    echo "<div style='background: #f8d7da; padding: 15px; border: 1px solid #f5c6cb; border-radius: 5px;'>";
+    echo "<div class='error-box'>";
     echo "❌ <strong>BATCH PROCESSING ERROR!</strong><br>";
     echo "Error: " . htmlspecialchars($e->getMessage()) . "<br><br>";
     echo "<strong>Solutions:</strong><br>";
@@ -237,5 +248,8 @@ try {
 }
 
 echo "<br><hr>";
-echo "<p><em>Batch $BATCH_NUMBER completed at: " . date('Y-m-d H:i:s') . "</em></p>";
+echo "<p class='footer-text'><em>Batch $BATCH_NUMBER completed at: " . date('Y-m-d H:i:s') . "</em></p>";
 ?>
+
+</body>
+</html>

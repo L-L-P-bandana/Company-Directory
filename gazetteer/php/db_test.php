@@ -10,10 +10,21 @@ $config = [
     'username' => 'u215315340_Gazetteerllp',
     'password' => 'Rainbowunicorn1!!'
 ];
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection Test</title>
+    <link rel="stylesheet" href="db-setup-files_style.css">
+</head>
+<body>
 
-echo "<h1>🚀 Gazetteer Database Connection Test</h1>";
-echo "<hr>";
+<h1>🚀 Gazetteer Database Connection Test</h1>
+<hr>
 
+<?php
 try {
     // Create PDO connection
     $pdo = new PDO(
@@ -68,7 +79,7 @@ try {
         echo "<br><h3>🔍 Sample Country Data:</h3>";
         $sampleCountries = $pdo->query("SELECT iso_code_2, name_common, capital, population FROM countries LIMIT 5")->fetchAll();
         
-        echo "<table border='1' style='border-collapse: collapse; width: 100%;'>";
+        echo "<table class='test-table'>";
         echo "<tr><th>Code</th><th>Country</th><th>Capital</th><th>Population</th></tr>";
         foreach ($sampleCountries as $country) {
             $population = number_format($country['population']);
@@ -114,13 +125,13 @@ try {
     echo "<h2>🎯 OVERALL STATUS:</h2>";
     
     if (count($tables) >= 10 && $currencyCount > 0 && $languageCount > 0) {
-        echo "<div style='background: #d4edda; padding: 15px; border: 1px solid #c3e6cb; border-radius: 5px;'>";
+        echo "<div class='test-success'>";
         echo "🎉 <strong>DATABASE IS READY!</strong><br>";
         echo "✅ All tables created successfully<br>";
         echo "✅ Sample data loaded<br>";
         echo "</div>";
     } else {
-        echo "<div style='background: #f8d7da; padding: 15px; border: 1px solid #f5c6cb; border-radius: 5px;'>";
+        echo "<div class='test-incomplete'>";
         echo "⚠️ <strong>SETUP INCOMPLETE</strong><br>";
         echo "❌ Some tables or data missing<br>";
         echo "❌ Check SQL import process<br>";
@@ -128,7 +139,7 @@ try {
     }
     
 } catch (PDOException $e) {
-    echo "<div style='background: #f8d7da; padding: 15px; border: 1px solid #f5c6cb; border-radius: 5px;'>";
+    echo "<div class='test-connection-error'>";
     echo "❌ <strong>DATABASE CONNECTION FAILED!</strong><br>";
     echo "Error: " . htmlspecialchars($e->getMessage()) . "<br><br>";
     echo "<strong>Common fixes:</strong><br>";
@@ -139,5 +150,8 @@ try {
 }
 
 echo "<br><hr>";
-echo "<p><em>Test completed at: " . date('Y-m-d H:i:s') . "</em></p>";
+echo "<p class='footer-text'><em>Test completed at: " . date('Y-m-d H:i:s') . "</em></p>";
 ?>
+
+</body>
+</html>
