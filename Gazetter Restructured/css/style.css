@@ -1,126 +1,54 @@
-html, body {
-  margin: 0;
-  padding: 0;
-}
+/* Core Map Styles */
+#map { cursor: crosshair; }
+.leaflet-container { cursor: crosshair !important; }
+.leaflet-dragging { cursor: grabbing !important; }
+.leaflet-grab { cursor: grab !important; }
+.leaflet-interactive { cursor: pointer !important; }
 
-#map {
-  width: 100%;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-}
-
+/* Country Selector - Individual floating element */
 #selectContainer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1000;
-  width: 100%;
-  padding: 11px 0;
-}
-
-#countrySelect {
+  top: 15px;
+  left: 15px;
   width: 200px;
-  margin: 0 auto;
 }
-
-/* Search Container - Moved left to avoid layer control overlap */
-#searchContainer {
-  position: fixed;
-  top: 11px;
-  right: 200px; /* Moved left to give space for layer control */
-  z-index: 1001;
-  width: 280px;
-}
-
-.search-input-wrapper {
-  position: relative;
-}
-
-#countrySearch {
+#countrySelect {
   width: 100%;
-  padding: 8px 40px 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(5px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
 }
 
-#countrySearch:focus {
-  outline: none;
-  border-color: #28a745;
-  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25), 0 2px 12px rgba(0, 0, 0, 0.15);
-  background-color: #fff;
+/* Search Container - Individual floating element */
+#searchContainer {
+  top: 15px;
+  right: 15px;
+  width: 250px;
+}
+#countrySearch {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
 }
 
-.search-icon {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #6c757d;
-  font-size: 14px;
-  pointer-events: none;
+/* Search Results */
+.search-results { 
+  display: none; 
+  max-height: 300px; 
+  overflow-y: auto; 
+  z-index: 1012; 
 }
-
-/* Search Results Dropdown */
-.search-results {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-top: none;
-  border-radius: 0 0 6px 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  max-height: 300px;
-  overflow-y: auto;
-  z-index: 1002;
-  display: none;
-}
-
-.search-results.show {
-  display: block;
-}
-
+.search-results.show { display: block; }
 .search-result-item {
   padding: 10px 12px;
-  border-bottom: 1px solid #f1f1f1;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s;
   font-size: 14px;
+  border-bottom: 1px solid #f1f1f1;
 }
-
-.search-result-item:hover {
-  background-color: #f8f9fa;
-}
-
-.search-result-item:last-child {
-  border-bottom: none;
-}
-
-.search-result-item.highlighted {
-  background-color: #e7f3ff;
-}
-
-.search-no-results {
-  padding: 12px;
-  text-align: center;
-  color: #6c757d;
-  font-size: 14px;
-  font-style: italic;
-}
-
-/* Country code styling in search results */
+.search-result-item:hover { background-color: #f8f9fa; }
+.search-result-item.highlighted { background-color: #e7f3ff; }
 .search-result-code {
-  display: inline-block;
   background: #e9ecef;
   color: #495057;
   padding: 2px 6px;
@@ -131,255 +59,248 @@ html, body {
   text-align: center;
 }
 
-/* Country Markers */
+/* Country Geomarkers - Map Pin Shape */
 .country-marker {
   background: transparent !important;
   border: none !important;
-  cursor: pointer;
+  cursor: pointer !important;
+  z-index: 1000;
 }
-
 .marker-inner {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.marker-inner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #28a745, #20c997);
   border: 3px solid #fff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 50% 50% 50% 0;
+  transform: translateX(-50%) rotate(-45deg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3);
+}
+.marker-inner::after {
+  content: attr(data-country-code);
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 10px;
   font-weight: bold;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-  position: relative;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  z-index: 1001;
 }
-
-.marker-inner:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+.marker-inner:hover::before {
+  transform: translateX(-50%) rotate(-45deg) scale(1.1);
   background: linear-gradient(135deg, #20c997, #17a2b8);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 3px 8px rgba(0,0,0,0.4);
 }
 
-.marker-inner:active {
-  transform: scale(0.95);
-}
-
-/* City Markers */
-.city-marker {
+/* City/Airport Markers */
+.city-marker, .airport-marker {
   background: transparent !important;
   border: none !important;
-  cursor: pointer;
+  cursor: pointer !important;
 }
-
 .city-marker-inner {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   background: linear-gradient(135deg, #007bff, #0056b3);
   border: 2px solid #fff;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: bold;
   color: #fff;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   transition: all 0.3s ease;
-}
-
-.city-marker-inner:hover {
-  transform: scale(1.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-/* Airport Markers */
-.airport-marker {
-  background: transparent !important;
-  border: none !important;
   cursor: pointer;
 }
-
 .airport-marker-inner {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   background: linear-gradient(135deg, #fd7e14, #e55a00);
   border: 2px solid #fff;
   border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 7px;
+  font-size: 9px;
   font-weight: bold;
   color: #fff;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   transition: all 0.3s ease;
+  cursor: pointer;
 }
-
+.city-marker-inner:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  background: linear-gradient(135deg, #0056b3, #004085);
+}
 .airport-marker-inner:hover {
   transform: scale(1.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  background: linear-gradient(135deg, #e55a00, #cc4900);
 }
 
-/* Marker pulse animation for new markers */
-@keyframes marker-pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(40, 167, 69, 0.7);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 10px rgba(40, 167, 69, 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(40, 167, 69, 0);
-  }
+/* Pulse Animation */
+@keyframes geomarker-pulse {
+  0% { transform: translateX(-50%) rotate(-45deg) scale(1); }
+  50% { transform: translateX(-50%) rotate(-45deg) scale(1.1); }
+  100% { transform: translateX(-50%) rotate(-45deg) scale(1); }
+}
+.marker-inner.new-marker::before { animation: geomarker-pulse 2s ease-out; }
+
+/* Cluster Styling */
+.marker-cluster { cursor: pointer !important; }
+.marker-cluster div { cursor: pointer; transition: transform 0.2s ease; }
+.marker-cluster div:hover { transform: scale(1.1); }
+
+/* City Clusters - Blue */
+.marker-cluster.city-small, .marker-cluster.city-medium, .marker-cluster.city-large { background-color: rgba(0,123,255,0.6); }
+.marker-cluster.city-small div, .marker-cluster.city-medium div, .marker-cluster.city-large div {
+  background-color: rgba(0,123,255,0.8);
+  color: white;
+  font-weight: bold;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.marker-cluster.city-small div:hover, .marker-cluster.city-medium div:hover, .marker-cluster.city-large div:hover {
+  box-shadow: 0 4px 16px rgba(0,123,255,0.6);
 }
 
-.marker-inner.new-marker {
-  animation: marker-pulse 1.5s ease-out;
+/* Airport Clusters - Orange */
+.marker-cluster.airport-small, .marker-cluster.airport-medium, .marker-cluster.airport-large { background-color: rgba(253,126,20,0.6); }
+.marker-cluster.airport-small div, .marker-cluster.airport-medium div, .marker-cluster.airport-large div {
+  background-color: rgba(253,126,20,0.8);
+  color: white;
+  font-weight: bold;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.marker-cluster.airport-small div:hover, .marker-cluster.airport-medium div:hover, .marker-cluster.airport-large div:hover {
+  box-shadow: 0 4px 16px rgba(253,126,20,0.6);
 }
 
-/* Country Tooltip Styling */
+/* Tooltip Styling */
 .country-tooltip {
-  background: rgba(0, 0, 0, 0.8) !important;
+  background: rgba(0,0,0,0.8) !important;
   color: #fff !important;
   border: none !important;
   border-radius: 4px !important;
   padding: 6px 10px !important;
   font-size: 12px !important;
   font-weight: 500 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-  backdrop-filter: blur(5px) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  cursor: default !important;
 }
-
-.country-tooltip:before {
-  border-top-color: rgba(0, 0, 0, 0.8) !important;
-}
-
-/* City/Airport Tooltip Styling */
-.city-tooltip,
-.airport-tooltip {
-  background: rgba(0, 123, 255, 0.9) !important;
+.city-tooltip {
+  background: rgba(0,123,255,0.9) !important;
   color: #fff !important;
   border: none !important;
   border-radius: 3px !important;
   padding: 4px 8px !important;
   font-size: 11px !important;
-  font-weight: 500 !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+  cursor: default !important;
 }
-
 .airport-tooltip {
-  background: rgba(253, 126, 20, 0.9) !important;
+  background: rgba(253,126,20,0.9) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 3px !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  cursor: default !important;
 }
 
-/* Leaflet control styling for marker layer */
-.leaflet-control-layers-list {
-  font-size: 13px;
-}
+/* Control Cursors */
+.easy-button-button { cursor: pointer !important; }
+.leaflet-control-layers-toggle { cursor: pointer !important; }
+.leaflet-control-zoom a { cursor: pointer !important; }
 
-.leaflet-control-layers-list label {
-  font-weight: normal;
-  margin-bottom: 5px;
-}
-
-/* Cluster styling */
-.marker-cluster-small {
-  background-color: rgba(40, 167, 69, 0.6);
-}
-.marker-cluster-small div {
-  background-color: rgba(40, 167, 69, 0.8);
-}
-
-.marker-cluster-medium {
-  background-color: rgba(255, 193, 7, 0.6);
-}
-.marker-cluster-medium div {
-  background-color: rgba(255, 193, 7, 0.8);
-}
-
-.marker-cluster-large {
-  background-color: rgba(220, 53, 69, 0.6);
-}
-.marker-cluster-large div {
-  background-color: rgba(220, 53, 69, 0.8);
-}
-
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  #searchContainer {
-    right: 160px; /* Less space on smaller screens */
-    width: 250px;
-  }
-}
-
+/* Mobile Responsive - Stack Vertically */
 @media (max-width: 768px) {
-  #searchContainer {
-    width: 220px;
-    right: 120px;
-  }
-  
+  /* Stack vertically on mobile */
   #selectContainer {
-    padding: 8px 0;
+    top: 10px;
+    left: 10px;
+    width: calc(100vw - 20px);
+    max-width: 300px;
   }
   
-  #countrySelect {
-    width: 180px;
+  #searchContainer {
+    top: 70px; /* Below the country selector */
+    left: 10px;
+    right: auto;
+    width: calc(100vw - 20px);
+    max-width: 300px;
   }
   
-  .marker-inner {
-    width: 28px;
-    height: 28px;
-    font-size: 9px;
-  }
-  
-  .city-marker-inner {
-    width: 18px;
-    height: 18px;
-    font-size: 7px;
-  }
-  
-  .airport-marker-inner {
-    width: 16px;
-    height: 16px;
-    font-size: 6px;
-  }
+  /* Smaller markers on mobile */
+  .marker-inner { width: 40px; height: 40px; }
+  .marker-inner::before { width: 28px; height: 28px; }
+  .marker-inner::after { font-size: 8px; top: 6px; }
+  .city-marker-inner, .airport-marker-inner { width: 18px; height: 18px; font-size: 7px; }
 }
 
 @media (max-width: 480px) {
+  /* Very small phones - more compact */
+  #selectContainer {
+    width: calc(100vw - 16px);
+    max-width: 250px;
+    left: 8px;
+    top: 8px;
+  }
+  
   #searchContainer {
-    width: 180px;
-    right: 80px;
+    top: 60px;
+    left: 8px;
+    width: calc(100vw - 16px);
+    max-width: 250px;
   }
   
-  #countrySelect {
-    width: 160px;
+  #countrySelect, #countrySearch {
+    font-size: 14px;
   }
   
-  .search-results {
-    max-height: 200px;
+  /* Even smaller markers */
+  .marker-inner { width: 36px; height: 36px; }
+  .marker-inner::before { width: 24px; height: 24px; }
+  .marker-inner::after { font-size: 7px; top: 5px; }
+  .city-marker-inner, .airport-marker-inner { width: 16px; height: 16px; font-size: 6px; }
+}
+
+/* Larger screens - side by side */
+@media (min-width: 769px) {
+  #selectContainer {
+    width: 220px;
   }
   
-  .marker-inner {
-    width: 26px;
-    height: 26px;
-    font-size: 8px;
+  #searchContainer {
+    width: 280px;
+  }
+}
+
+@media (min-width: 1200px) {
+  #selectContainer {
+    width: 250px;
   }
   
-  .city-marker-inner {
-    width: 16px;
-    height: 16px;
-    font-size: 6px;
-  }
-  
-  .airport-marker-inner {
-    width: 14px;
-    height: 14px;
-    font-size: 5px;
+  #searchContainer {
+    width: 320px;
   }
 }

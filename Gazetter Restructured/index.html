@@ -16,22 +16,23 @@
     <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-    <span id="selectContainer">
+    <!-- Country Selector -->
+    <div id="selectContainer" class="position-fixed" style="z-index: 1010;">
         <select id="countrySelect" class="form-select shadow-sm">
             <option value="">Select a country...</option>
         </select>
-    </span>
+    </div>
 
     <!-- Search Container -->
-    <div id="searchContainer">
-        <div class="search-input-wrapper">
-            <input type="text" id="countrySearch" class="form-control" placeholder="Search countries..." autocomplete="off">
-            <i class="fa-solid fa-search search-icon"></i>
-            <div id="searchResults" class="search-results"></div>
+    <div id="searchContainer" class="position-fixed" style="z-index: 1011;">
+        <div class="position-relative">
+            <input type="text" id="countrySearch" class="form-control pe-5 shadow-sm" placeholder="Search countries..." autocomplete="off">
+            <i class="fa-solid fa-search position-absolute text-muted" style="right: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none;"></i>
+            <div id="searchResults" class="search-results position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow"></div>
         </div>
     </div>
 
-    <div id="map"></div>
+    <div id="map" class="w-100 vh-100"></div>
 
     <!-- Demographics Modal -->
     <div id="demographicsModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="demographicsModalLabel">
@@ -44,37 +45,27 @@
                 <div class="modal-body">
                     <table class="table table-striped">
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-users fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-users fa-xl text-success"></i></td>
                             <td>Population</td>
                             <td class="text-end" id="population">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-map fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-map fa-xl text-success"></i></td>
                             <td>Area</td>
                             <td class="text-end" id="area">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-city fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-city fa-xl text-success"></i></td>
                             <td>Capital</td>
                             <td class="text-end" id="capital">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-globe fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-globe fa-xl text-success"></i></td>
                             <td>Region</td>
                             <td class="text-end" id="region">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-external-link fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-external-link fa-xl text-success"></i></td>
                             <td>Capital Info</td>
                             <td class="text-end" id="capitalWiki">Loading...</td>
                         </tr>
@@ -98,23 +89,17 @@
                 <div class="modal-body">
                     <table class="table table-striped">
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-thermometer-half fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-thermometer-half fa-xl text-success"></i></td>
                             <td>Temperature</td>
                             <td class="text-end" id="temperature">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-cloud fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-cloud fa-xl text-success"></i></td>
                             <td>Condition</td>
                             <td class="text-end" id="condition">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-eye fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-eye fa-xl text-success"></i></td>
                             <td>Humidity</td>
                             <td class="text-end" id="humidity">Loading...</td>
                         </tr>
@@ -127,38 +112,77 @@
         </div>
     </div>
 
-    <!-- Currency Modal -->
+    <!-- Currency Modal with Converter -->
     <div id="currencyModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="currencyModalLabel">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content shadow">
                 <div class="modal-header bg-success bg-gradient text-white">
-                    <h5 class="modal-title" id="currencyModalLabel">Currency</h5>
+                    <h5 class="modal-title" id="currencyModalLabel">Currency & Converter</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <table class="table table-striped">
+                    <!-- Currency Info -->
+                    <table class="table table-striped mb-4">
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-coins fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-coins fa-xl text-success"></i></td>
                             <td>Currency</td>
                             <td class="text-end" id="currencyName">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-dollar-sign fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-dollar-sign fa-xl text-success"></i></td>
                             <td>Code</td>
                             <td class="text-end" id="currencyCode">Loading...</td>
                         </tr>
                         <tr>
-                            <td class="text-center">
-                                <i class="fa-solid fa-exchange-alt fa-xl text-success"></i>
-                            </td>
+                            <td class="text-center"><i class="fa-solid fa-exchange-alt fa-xl text-success"></i></td>
                             <td>Exchange Rate (USD)</td>
                             <td class="text-end" id="exchangeRate">Loading...</td>
                         </tr>
                     </table>
+
+                    <!-- Currency Converter -->
+                    <div class="border-top pt-4">
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-calculator text-success me-2"></i>Currency Converter</h6>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small">From</label>
+                                <select id="fromCurrency" class="form-select form-select-sm">
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">To</label>
+                                <select id="toCurrency" class="form-select form-select-sm">
+                                    <option value="USD">US Dollar (USD)</option>
+                                    <option value="EUR">Euro (EUR)</option>
+                                    <option value="GBP">British Pound (GBP)</option>
+                                    <option value="JPY">Japanese Yen (JPY)</option>
+                                    <option value="CAD">Canadian Dollar (CAD)</option>
+                                    <option value="AUD">Australian Dollar (AUD)</option>
+                                    <option value="CHF">Swiss Franc (CHF)</option>
+                                    <option value="CNY">Chinese Yuan (CNY)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label small">Amount</label>
+                                <input type="number" id="convertAmount" class="form-control form-control-sm" value="1" min="0" step="0.01">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Result</label>
+                                <div class="form-control form-control-sm bg-light" id="convertResult">Enter amount</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-success btn-sm" id="convertBtn">
+                                <i class="fa-solid fa-exchange-alt me-1"></i>Convert
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
