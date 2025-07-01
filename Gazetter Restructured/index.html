@@ -1,343 +1,223 @@
-<span id="selectContainer">
-  <select id="countrySelect" class="form-select shadow-sm">
-    <!-- populate from an AJAX CALL to a PHP routine that returns a JSON object that is an array of just ISO codes and names from countryBorders.geo.json -->
-    <option value="AF">Afghanistan</option>
-  </select>
-</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Gazetteer - Simple Version</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <span id="selectContainer">
+        <select id="countrySelect" class="form-select shadow-sm">
+            <option value="">Select a country...</option>
+        </select>
+    </span>
 
-<div id="map"></div>
-
-<!-- example modal layout -->
-
-<div id="exampleModal" class="modal" data-bs-backdrop="false" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content shadow">
-      <div class="modal-header bg-success bg-gradient text-white">
-        <h5 class="modal-title">Overview</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <table class="table table-striped">
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-street-view fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-heart fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-car fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-book fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-bath fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-bell fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-anchor fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-money-bill fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-wifi fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-globe fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-bicycle fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-landmark fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-tree fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-
-            <td class="text-center">
-              <i class="fa-solid fa-bookmark fa-xl text-success"></i>
-            </td>
-
-            <td>
-              Attribute
-            </td>
-
-            <td class="text-end">
-              value
-            </td>
-
-          </tr>
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-bell fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr> 
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-fire fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr>           
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-key fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr> 
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-newspaper fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr> 
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-rocket fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr> 
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-wheelchair fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr> 
-          <tr>
-            
-            <td class="text-center">
-              <i class="fa-solid fa-monument fa-xl text-success"></i>
-            </td>
-            
-            <td>
-              Attribute
-            </td>
-            
-            <td class="text-end">
-              value
-            </td>
-            
-          </tr>           
-        </table>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
-      </div>
+    <!-- Search Container -->
+    <div id="searchContainer">
+        <div class="search-input-wrapper">
+            <input type="text" id="countrySearch" class="form-control" placeholder="Search countries..." autocomplete="off">
+            <i class="fa-solid fa-search search-icon"></i>
+            <div id="searchResults" class="search-results"></div>
+        </div>
     </div>
-  </div>
-</div>
+
+    <div id="map"></div>
+
+    <!-- Demographics Modal -->
+    <div id="demographicsModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="demographicsModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-success bg-gradient text-white">
+                    <h5 class="modal-title" id="demographicsModalLabel">Demographics</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-users fa-xl text-success"></i>
+                            </td>
+                            <td>Population</td>
+                            <td class="text-end" id="population">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-map fa-xl text-success"></i>
+                            </td>
+                            <td>Area</td>
+                            <td class="text-end" id="area">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-city fa-xl text-success"></i>
+                            </td>
+                            <td>Capital</td>
+                            <td class="text-end" id="capital">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-globe fa-xl text-success"></i>
+                            </td>
+                            <td>Region</td>
+                            <td class="text-end" id="region">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-external-link fa-xl text-success"></i>
+                            </td>
+                            <td>Capital Info</td>
+                            <td class="text-end" id="capitalWiki">Loading...</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weather Modal -->
+    <div id="weatherModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="weatherModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-success bg-gradient text-white">
+                    <h5 class="modal-title" id="weatherModalLabel">Weather</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-thermometer-half fa-xl text-success"></i>
+                            </td>
+                            <td>Temperature</td>
+                            <td class="text-end" id="temperature">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-cloud fa-xl text-success"></i>
+                            </td>
+                            <td>Condition</td>
+                            <td class="text-end" id="condition">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-eye fa-xl text-success"></i>
+                            </td>
+                            <td>Humidity</td>
+                            <td class="text-end" id="humidity">Loading...</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Currency Modal -->
+    <div id="currencyModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="currencyModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-success bg-gradient text-white">
+                    <h5 class="modal-title" id="currencyModalLabel">Currency</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-striped">
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-coins fa-xl text-success"></i>
+                            </td>
+                            <td>Currency</td>
+                            <td class="text-end" id="currencyName">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-dollar-sign fa-xl text-success"></i>
+                            </td>
+                            <td>Code</td>
+                            <td class="text-end" id="currencyCode">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <i class="fa-solid fa-exchange-alt fa-xl text-success"></i>
+                            </td>
+                            <td>Exchange Rate (USD)</td>
+                            <td class="text-end" id="exchangeRate">Loading...</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- News Modal -->
+    <div id="newsModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="newsModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-success bg-gradient text-white">
+                    <h5 class="modal-title" id="newsModalLabel">Latest News</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="newsContent">
+                        <div class="text-center">
+                            <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+                            <p>Loading latest news...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wikipedia Modal -->
+    <div id="wikipediaModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="wikipediaModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-success bg-gradient text-white">
+                    <h5 class="modal-title" id="wikipediaModalLabel">Wikipedia & Images</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="wikipediaContent">
+                        <div class="text-center">
+                            <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+                            <p>Loading Wikipedia information...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
