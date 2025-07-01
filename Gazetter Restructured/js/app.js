@@ -28,6 +28,30 @@ var airportClusterGroup = L.markerClusterGroup({
     });
   }
 });
+var railwayClusterGroup = L.markerClusterGroup({
+  showCoverageOnHover: false, zoomToBoundsOnClick: true, maxClusterRadius: 50,
+  iconCreateFunction: function(cluster) {
+    var count = cluster.getChildCount();
+    var size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
+    return new L.DivIcon({ 
+      html: '<div><span>' + count + '</span></div>', 
+      className: 'marker-cluster railway-' + size, 
+      iconSize: new L.Point(40, 40) 
+    });
+  }
+});
+var portClusterGroup = L.markerClusterGroup({
+  showCoverageOnHover: false, zoomToBoundsOnClick: true, maxClusterRadius: 50,
+  iconCreateFunction: function(cluster) {
+    var count = cluster.getChildCount();
+    var size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
+    return new L.DivIcon({ 
+      html: '<div><span>' + count + '</span></div>', 
+      className: 'marker-cluster port-' + size, 
+      iconSize: new L.Point(40, 40) 
+    });
+  }
+});
 
 // Tile layers
 var streets = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {attribution: "Tiles &copy; Esri"});
@@ -39,6 +63,7 @@ var weatherBtn = L.easyButton("fa-cloud fa-xl", function() { loadWeatherData(); 
 var currencyBtn = L.easyButton("fa-coins fa-xl", function() { loadCurrencyData(); $("#currencyModal").modal("show"); });
 var newsBtn = L.easyButton("fa-newspaper fa-xl", function() { loadNewsData(); $("#newsModal").modal("show"); });
 var wikipediaBtn = L.easyButton("fa-wikipedia-w fa-xl", function() { loadWikipediaData(); $("#wikipediaModal").modal("show"); });
+var holidaysBtn = L.easyButton("fa-calendar fa-xl", function() { loadHolidaysData(); $("#holidaysModal").modal("show"); });
 
 function debounce(func, wait) {
   let timeout;
@@ -53,14 +78,22 @@ $(document).ready(function() {
   map = L.map("map", {layers: [streets]}).setView([54.5, -4], 6);
   map.addLayer(cityClusterGroup);
   map.addLayer(airportClusterGroup);
+  map.addLayer(railwayClusterGroup);
+  map.addLayer(portClusterGroup);
   
   L.control.layers(
     {"Streets": streets, "Satellite": satellite}, 
-    {"Visited Countries": countryMarkers, "Cities": cityClusterGroup, "Airports": airportClusterGroup}
+    {
+      "Visited Countries": countryMarkers, 
+      "Cities": cityClusterGroup, 
+      "Airports": airportClusterGroup,
+      "Railways": railwayClusterGroup,
+      "Ports": portClusterGroup
+    }
   ).addTo(map);
   
   countryMarkers.addTo(map);
-  [demographicsBtn, weatherBtn, currencyBtn, newsBtn, wikipediaBtn].forEach(btn => btn.addTo(map));
+  [demographicsBtn, weatherBtn, currencyBtn, newsBtn, wikipediaBtn, holidaysBtn].forEach(btn => btn.addTo(map));
   
   loadCountries();
   loadAllCountryBorders();
@@ -175,6 +208,16 @@ function loadCitiesAndAirports(countryCode) {
     url: 'php/getAirports.php', data: {country: countryCode}, dataType: 'json',
     success: function(airports) { if (airports?.length) addAirportMarkers(airports); }
   });
+  
+  $.ajax({
+    url: 'php/getRailways.php', data: {country: countryCode}, dataType: 'json',
+    success: function(railways) { if (railways?.length) addRailwayMarkers(railways); }
+  });
+  
+  $.ajax({
+    url: 'php/getPorts.php', data: {country: countryCode}, dataType: 'json',
+    success: function(ports) { if (ports?.length) addPortMarkers(ports); }
+  });
 }
 
 function addCityMarkers(cities) {
@@ -199,9 +242,33 @@ function addAirportMarkers(airports) {
   });
 }
 
+function addRailwayMarkers(railways) {
+  railways.forEach(railway => {
+    var marker = L.marker([railway.lat, railway.lng], { 
+      icon: L.divIcon({className: 'railway-marker', html: '<div class="railway-marker-inner">🚂</div>', iconSize: [22, 22], iconAnchor: [11, 11]})
+    });
+    var tooltip = railway.name + (railway.type ? ' (' + railway.type + ')' : '') + (railway.admin1 ? ' - ' + railway.admin1 : '');
+    marker.bindTooltip(tooltip, {permanent: false, direction: 'top', className: 'railway-tooltip'});
+    railwayClusterGroup.addLayer(marker);
+  });
+}
+
+function addPortMarkers(ports) {
+  ports.forEach(port => {
+    var marker = L.marker([port.lat, port.lng], { 
+      icon: L.divIcon({className: 'port-marker', html: '<div class="port-marker-inner">⚓</div>', iconSize: [22, 22], iconAnchor: [11, 11]})
+    });
+    var tooltip = port.name + (port.type ? ' (' + port.type + ')' : '') + (port.admin1 ? ' - ' + port.admin1 : '');
+    marker.bindTooltip(tooltip, {permanent: false, direction: 'top', className: 'port-tooltip'});
+    portClusterGroup.addLayer(marker);
+  });
+}
+
 function clearClustersForCountry() {
   cityClusterGroup.clearLayers();
   airportClusterGroup.clearLayers();
+  railwayClusterGroup.clearLayers();
+  portClusterGroup.clearLayers();
 }
 
 // Search functionality
@@ -474,6 +541,49 @@ function loadWikipediaData() {
       }
       
       $('#wikipediaContent').html(html || '<p class="text-center">No Wikipedia information available for this country</p>');
+    }
+  });
+}
+
+function loadHolidaysData() {
+  if (!currentCountryCode) {
+    $('#holidaysContent').html('<p class="text-center">Select a country first</p>');
+    return;
+  }
+  
+  $('#holidaysContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading public holidays...</p></div>');
+  
+  $.ajax({
+    url: 'php/getHolidays.php', data: {country: currentCountryCode}, dataType: 'json',
+    success: function(data) {
+      if (data?.holidays?.length) {
+        var html = `<div class="mb-3">
+          <h6 class="fw-bold">${data.country} - ${new Date().getFullYear()} Public Holidays</h6>
+        </div>`;
+        
+        html += '<div class="list-group">';
+        data.holidays.forEach(holiday => {
+          var date = new Date(holiday.date + 'T00:00:00');
+          var formattedDate = date.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+          
+          html += `<div class="list-group-item d-flex justify-content-between align-items-start">
+            <div class="ms-2 me-auto">
+              <div class="fw-bold">${holiday.name}</div>
+              <small class="text-muted">${holiday.type}</small>
+            </div>
+            <span class="badge bg-success rounded-pill">${formattedDate}</span>
+          </div>`;
+        });
+        html += '</div>';
+        
+        $('#holidaysContent').html(html);
+      } else {
+        $('#holidaysContent').html('<p class="text-center">No holiday information available for this country</p>');
+      }
     }
   });
 }

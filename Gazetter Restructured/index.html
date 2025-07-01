@@ -17,17 +17,17 @@
 </head>
 <body>
     <!-- Country Selector -->
-    <div id="selectContainer" class="position-fixed" style="z-index: 1010;">
+    <div id="selectContainer" class="position-fixed">
         <select id="countrySelect" class="form-select shadow-sm">
             <option value="">Select a country...</option>
         </select>
     </div>
 
     <!-- Search Container -->
-    <div id="searchContainer" class="position-fixed" style="z-index: 1011;">
+    <div id="searchContainer" class="position-fixed">
         <div class="position-relative">
             <input type="text" id="countrySearch" class="form-control pe-5 shadow-sm" placeholder="Search countries..." autocomplete="off">
-            <i class="fa-solid fa-search position-absolute text-muted" style="right: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none;"></i>
+            <i class="fa-solid fa-search position-absolute text-muted search-icon"></i>
             <div id="searchResults" class="search-results position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow"></div>
         </div>
     </div>
@@ -227,6 +227,29 @@
                         <div class="text-center">
                             <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
                             <p>Loading Wikipedia information...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Public Holidays Modal -->
+    <div id="holidaysModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="holidaysModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-success bg-gradient text-white">
+                    <h5 class="modal-title" id="holidaysModalLabel">Public Holidays</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="holidaysContent">
+                        <div class="text-center">
+                            <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+                            <p>Loading public holidays...</p>
                         </div>
                     </div>
                 </div>
