@@ -598,11 +598,15 @@ function loadWikipediaData() {
   
   $('#wikipediaContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading Wikipedia information...</p></div>');
   
+  // Step 1: Load Wikipedia text quickly (no images)
   $.ajax({
-    url: 'php/getWikipedia.php', data: {country: currentCountryCode}, dataType: 'json',
+    url: 'php/getWikipedia.php', 
+    data: {country: currentCountryCode}, // No images parameter = fast load
+    dataType: 'json',
     success: function(data) {
       var html = '';
       
+      // Add Wikipedia content immediately
       if (data.extract) {
         html += `<div class="mb-3">
           <h6 class="fw-bold">About ${data.title || 'this country'}</h6>
@@ -611,20 +615,72 @@ function loadWikipediaData() {
         </div>`;
       }
       
-      if (data.images?.length) {
-        html += `<div class="mb-3">
-          <h6 class="fw-bold">Images</h6>
-          <div class="row">
-            ${data.images.slice(0, 4).map(img => 
-              `<div class="col-6 mb-2">
-                <img src="${img.url}" class="img-fluid rounded" alt="${img.caption || 'Country image'}" style="height: 100px; object-fit: cover; width: 100%;">
-              </div>`
-            ).join('')}
+      // Add images loading section
+      html += `<div class="mb-3">
+        <h6 class="fw-bold">Images</h6>
+        <div id="imagesContainer">
+          <div class="text-center py-3">
+            <i class="fa-solid fa-spinner fa-spin fa-xl text-success mb-2"></i>
+            <p class="small text-muted">Loading country images...</p>
           </div>
+        </div>
+      </div>`;
+      
+      $('#wikipediaContent').html(html || '<p class="text-center">No Wikipedia information available for this country</p>');
+      
+      // Step 2: Load images asynchronously (slower, in background)
+      loadCountryImages(currentCountryCode);
+    },
+    error: function() {
+      $('#wikipediaContent').html('<p class="text-center text-danger"><i class="fa-solid fa-exclamation-triangle me-2"></i>Failed to load Wikipedia data</p>');
+    }
+  });
+}
+
+function loadCountryImages(countryCode) {
+  $.ajax({
+    url: 'php/getWikipedia.php', 
+    data: {country: countryCode, images: 'true'}, // Request images specifically
+    dataType: 'json',
+    success: function(data) {
+      var imagesHtml = '';
+      
+      if (data.images?.length) {
+        imagesHtml = '<div class="row">';
+        
+        data.images.forEach(img => {
+          if (img.type === 'info_card') {
+            // Handle info card for when images aren't available
+            imagesHtml += `<div class="col-12 mb-2">
+              <div class="alert alert-info text-center">
+                <i class="fa-solid fa-info-circle me-1"></i>${img.caption}
+              </div>
+            </div>`;
+          } else if (img.url) {
+            // Handle normal images
+            imagesHtml += `<div class="col-6 mb-2">
+              <img src="${img.url}" class="img-fluid rounded" alt="${img.caption || 'Country image'}" 
+                   style="height: 100px; object-fit: cover; width: 100%;"
+                   onerror="this.style.display='none';">
+              ${img.caption ? `<small class="text-muted d-block mt-1">${img.caption}</small>` : ''}
+            </div>`;
+          }
+        });
+        
+        imagesHtml += '</div>';
+      } else {
+        imagesHtml = `<div class="alert alert-info text-center">
+          <i class="fa-solid fa-camera me-1"></i>Images temporarily unavailable for this country
         </div>`;
       }
       
-      $('#wikipediaContent').html(html || '<p class="text-center">No Wikipedia information available for this country</p>');
+      // Update just the images container
+      $('#imagesContainer').html(imagesHtml);
+    },
+    error: function() {
+      $('#imagesContainer').html(`<div class="alert alert-warning text-center">
+        <i class="fa-solid fa-exclamation-triangle me-1"></i>Failed to load images
+      </div>`);
     }
   });
 }
