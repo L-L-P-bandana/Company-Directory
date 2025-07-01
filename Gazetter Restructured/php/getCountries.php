@@ -9,6 +9,47 @@ function logError($message) {
     error_log("getCountries.php: " . $message);
 }
 
+function getCountryCode($properties) {
+    // Try multiple possible ISO code properties in order of preference
+    $isoProps = [
+        'ISO3166-1-Alpha-2',  // Primary
+        'ISO_A2',             // Alternative
+        'iso_a2',             // Lowercase alternative
+        'ISO2',               // Another common name
+        'iso2'                // Lowercase
+    ];
+    
+    foreach ($isoProps as $prop) {
+        if (isset($properties[$prop])) {
+            $value = $properties[$prop];
+            if ($value && $value !== '-99' && $value !== '' && strlen($value) === 2) {
+                return strtoupper($value);
+            }
+        }
+    }
+    
+    // If no valid ISO code found, try to map by name
+    return mapCountryNameToIso($properties['name'] ?? '');
+}
+
+function mapCountryNameToIso($countryName) {
+    if (!$countryName) return null;
+    
+    $nameToIso = [
+        'France' => 'FR',
+        'French Republic' => 'FR',
+        'Norway' => 'NO',
+        'Kingdom of Norway' => 'NO',
+        'United Kingdom' => 'GB',
+        'United States of America' => 'US',
+        'United States' => 'US',
+        'Germany' => 'DE',
+        'Federal Republic of Germany' => 'DE'
+    ];
+    
+    return $nameToIso[$countryName] ?? null;
+}
+
 try {
     logError("Script started");
     
@@ -28,48 +69,78 @@ try {
     logError("Found " . count($data['features']) . " features");
     
     $countries = [];
+    $problemCountries = [];
     
     foreach ($data['features'] as $index => $feature) {
         if (isset($feature['properties'])) {
             $props = $feature['properties'];
             
-            // Use the exact property names from the GeoJSON file
-            if (isset($props['ISO3166-1-Alpha-2']) && isset($props['name'])) {
-                $countryCode = $props['ISO3166-1-Alpha-2'];
-                $countryName = $props['name'];
-                
-                // Make sure I've got valid data
-                if (!empty($countryCode) && !empty($countryName)) {
-                    $countries[] = [
-                        'code' => strtoupper($countryCode),
-                        'name' => $countryName
-                    ];
-                }
-            }
+            // Use robust country code detection
+            $countryCode = getCountryCode($props);
+            $countryName = $props['name'] ?? 'Unknown';
             
-            // Log first few entries for debugging
-            if ($index < 3) {
-                logError("Feature $index - Code: " . ($props['ISO3166-1-Alpha-2'] ?? 'N/A') . ", Name: " . ($props['name'] ?? 'N/A'));
+            if ($countryCode && !empty($countryName)) {
+                $countries[] = [
+                    'code' => $countryCode,
+                    'name' => $countryName
+                ];
+                
+                // Log specific countries we're interested in
+                if (stripos($countryName, 'france') !== false || stripos($countryName, 'norway') !== false) {
+                    logError("Special country found - Name: {$countryName}, Code: {$countryCode}");
+                }
+            } else {
+                // Track problem countries for debugging
+                $problemCountries[] = [
+                    'index' => $index,
+                    'name' => $countryName,
+                    'attempted_code' => $countryCode,
+                    'iso_props' => array_filter($props, function($key) {
+                        return stripos($key, 'iso') !== false;
+                    }, ARRAY_FILTER_USE_KEY)
+                ];
             }
         }
     }
     
     logError("Processed " . count($countries) . " valid countries");
+    logError("Found " . count($problemCountries) . " problem countries");
     
-    // Sort by name
-    usort($countries, function($a, $b) {
-        return strcmp($a['name'], $b['name']);
-    });
+    // Log first few problem countries for debugging
+    foreach (array_slice($problemCountries, 0, 3) as $problem) {
+        logError("Problem country: " . json_encode($problem));
+    }
     
-    // Log sample countries
-    if (count($countries) > 0) {
-        logError("Sample countries: " . $countries[0]['code'] . " - " . $countries[0]['name']);
-        if (count($countries) > 1) {
-            logError("Second country: " . $countries[1]['code'] . " - " . $countries[1]['name']);
+    // Remove duplicates and sort by name
+    $uniqueCountries = [];
+    $seenCodes = [];
+    
+    foreach ($countries as $country) {
+        if (!in_array($country['code'], $seenCodes)) {
+            $uniqueCountries[] = $country;
+            $seenCodes[] = $country['code'];
         }
     }
     
-    echo json_encode($countries);
+    usort($uniqueCountries, function($a, $b) {
+        return strcmp($a['name'], $b['name']);
+    });
+    
+    logError("Final unique countries: " . count($uniqueCountries));
+    
+    // Verify France and Norway are included
+    $foundFrance = false;
+    $foundNorway = false;
+    
+    foreach ($uniqueCountries as $country) {
+        if ($country['code'] === 'FR') $foundFrance = true;
+        if ($country['code'] === 'NO') $foundNorway = true;
+    }
+    
+    logError("France found: " . ($foundFrance ? 'YES' : 'NO'));
+    logError("Norway found: " . ($foundNorway ? 'YES' : 'NO'));
+    
+    echo json_encode($uniqueCountries);
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());

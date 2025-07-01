@@ -75,7 +75,7 @@ try {
 
 function fetchWikipediaData($countryName) {
     try {
-        // Use Wikipedia API to get page extract
+        // Use Wiki API to get page extract
         $wikiApiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" . urlencode($countryName);
         
         $context = stream_context_create([
@@ -118,14 +118,14 @@ function fetchWikipediaData($countryName) {
 
 function fetchRealCountryImages($countryName) {
     try {
-        // Unsplash API - Your correct credentials
+        // Unsplash API
         $unsplashAccessKey = "XhdrXEeiO87sG1h2gh4JMAzye8kKAK_6mPJbziaAgWk";
         
         logError("Fetching images for: " . $countryName);
         
         $images = [];
         
-        // Try Unsplash first (but only 2 images to conserve API calls)
+        // Try Unsplash first (only 2 images to conserve API calls)
         $images = fetchUnsplashImages($countryName, $unsplashAccessKey, 2);
         
         // If Unsplash fails or rate limited, try Wikimedia Commons
@@ -134,7 +134,7 @@ function fetchRealCountryImages($countryName) {
             $images = fetchWikimediaImages($countryName);
         }
         
-        // If both fail, use optimized fallback (no CORS issues)
+        // If both fail, use this here fallback 
         if (empty($images)) {
             logError("All APIs failed, using optimized fallback");
             $images = generateOptimizedFallbacks($countryName);
@@ -157,7 +157,7 @@ function fetchUnsplashImages($countryName, $accessKey, $maxImages = 2) {
         
         $images = [];
         
-        // Simplified search terms to reduce API calls
+        // To reduce API calls
         $searchTerms = [
             $countryName . ' landmarks',
             $countryName . ' architecture'
@@ -252,7 +252,7 @@ function fetchSingleUnsplashImage($searchTerm, $accessKey) {
 
 function fetchWikimediaImages($countryName) {
     try {
-        // Wikimedia Commons API - completely free
+        // Wikipedia Commons API
         $searchUrl = "https://commons.wikimedia.org/w/api.php?" . http_build_query([
             'action' => 'query',
             'generator' => 'search',
@@ -338,17 +338,15 @@ function generateOptimizedFallbacks($countryName) {
     // Use Wikipedia/Wikimedia as primary fallback to avoid CORS issues
     logError("Generating optimized fallbacks for: " . $countryName);
     
-    // Try Wikimedia first
     $images = fetchWikimediaImages($countryName);
     
     if (!empty($images)) {
         return $images;
     }
     
-    // If Wikimedia fails, generate country-specific info cards instead of broken images
     return [
         [
-            'url' => '', // No image URL - will be handled in frontend
+            'url' => '',
             'caption' => 'Images temporarily unavailable for ' . $countryName,
             'type' => 'info_card'
         ]
@@ -356,7 +354,6 @@ function generateOptimizedFallbacks($countryName) {
 }
 
 function generateWikipediaFallback($countryName) {
-    // Generate basic information about the country
     $fallbackTexts = [
         'This country is located in a specific region of the world and has its own unique culture, history, and traditions.',
         'The nation has developed over centuries, with influences from various civilizations and cultures.',

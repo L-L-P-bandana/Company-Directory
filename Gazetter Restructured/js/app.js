@@ -100,6 +100,9 @@ $(document).ready(function() {
   setupSearchHandlers();
   setupCurrencyConverter();
   
+  // Auto-detect user location and highlight their country on page spawn
+  detectUserLocation();
+  
   // Event handlers
   $('#countrySelect').change(function() {
     var code = $(this).val();
@@ -111,20 +114,12 @@ $(document).ready(function() {
     detectClickedCountry(e.latlng, e.latlng);
   });
   
-  $('.modal').on('shown.bs.modal', function() {
-    $(this).find('.btn-close').off('blur.modal').on('blur.modal', function() {
-      $(this).closest('.modal').removeAttr('aria-hidden');
-    });
-  }).on('hidden.bs.modal', function() {
-    $(this).attr('aria-hidden', 'true');
-  });
-  
   $(document).click(function(e) {
     if (!$(e.target).closest('#searchContainer').length) hideSearchResults();
   });
 });
 
-// Currency Converter Setup
+// Currency Converter Rigging
 function setupCurrencyConverter() {
   loadGlobalExchangeRates();
   $('#convertBtn, #convertAmount, #fromCurrency, #toCurrency').on('click change input', performConversion);
@@ -145,7 +140,6 @@ function loadGlobalExchangeRates() {
       
       globalExchangeRates = data;
       populateCurrencySelectors(data.currencies);
-      console.log('Loaded exchange rates for', Object.keys(data.rates).length, 'currencies');
     },
     error: function() {
       console.error('Failed to load exchange rates');
@@ -155,7 +149,7 @@ function loadGlobalExchangeRates() {
 }
 
 function populateCurrencySelectors(currencies) {
-  // Populate both FROM and TO currency dropdowns with all currencies
+  // Populate currency dropdowns with all currencies
   var fromOptions = '<option value="">Select currency...</option>';
   var toOptions = '<option value="">Select currency...</option>';
   
@@ -203,7 +197,7 @@ function performConversion() {
   var fromRate = globalExchangeRates.rates[fromCode] || 1;
   var toRate = globalExchangeRates.rates[toCode] || 1;
   
-  // Convert: amount in fromCurrency -> USD -> toCurrency
+  // Conversion
   var usdAmount = fromCode === 'USD' ? amount : amount / fromRate;
   var result = toCode === 'USD' ? usdAmount : usdAmount * toRate;
   
@@ -326,7 +320,7 @@ function clearClustersForCountry() {
   portClusterGroup.clearLayers();
 }
 
-// Search functionality
+// Search func
 function setupSearchHandlers() {
   const searchInput = $('#countrySearch');
   const debouncedSearch = debounce(performSearch, 300);
@@ -413,7 +407,44 @@ function selectCountryFromSearch(countryCode) {
 function showSearchResults() { $('#searchResults').addClass('show'); }
 function hideSearchResults() { $('#searchResults').removeClass('show'); selectedSearchIndex = -1; }
 
-// Country selection
+function getCountryCode(feature) {
+  // Try multiple possible ISO code properties in order of preference to ensure capture (this was necessary as norway and france were being stubborn)
+  const isoProps = [
+    'ISO3166-1-Alpha-2',  // Primary
+    'ISO_A2',             // Alternative
+    'iso_a2',             // Lowercase alternative
+    'ISO2',               // Another common name
+    'iso2'                // Lowercase
+  ];
+  
+  for (const prop of isoProps) {
+    const value = feature.properties?.[prop];
+    if (value && value !== '-99' && value !== '' && value.length === 2) {
+      return value.toUpperCase();
+    }
+  }
+  
+  // If no valid ISO code found, try to map by name
+  return mapCountryNameToIso(feature.properties?.name);
+}
+
+function mapCountryNameToIso(countryName) {
+  if (!countryName) return null;
+  
+  const nameToIso = {
+    'France': 'FR',
+    'French Republic': 'FR',
+    'Norway': 'NO',
+    'Kingdom of Norway': 'NO',
+    'United Kingdom': 'GB',
+    'United States of America': 'US',
+    'United States': 'US',
+    'Germany': 'DE',
+    'Federal Republic of Germany': 'DE'
+  };
+  
+  return nameToIso[countryName] || null;
+}
 function selectCountry(countryCode, markerPosition) {
   currentCountryCode = countryCode;
   loadCountryBorder(countryCode);
@@ -430,7 +461,8 @@ function getCountryCenter(countryCode) {
   if (!allCountryBorders?.features) return null;
   
   for (var feature of allCountryBorders.features) {
-    if (feature.properties?.['ISO3166-1-Alpha-2'] === countryCode) {
+    const featureCode = getCountryCode(feature);
+    if (featureCode === countryCode) {
       try {
         return L.geoJSON(feature).getBounds().getCenter();
       } catch (error) {
@@ -514,7 +546,7 @@ function loadCurrencyData() {
         updateAmountSymbol(); // Update the amount field symbol
       }
       
-      // Trigger conversion if both currencies are selected
+      // Trigger conversion
       if ($('#fromCurrency').val() && $('#toCurrency').val()) {
         performConversion();
       }
@@ -552,15 +584,10 @@ function loadNewsData() {
   
   $('#newsContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading latest news...</p></div>');
   
-  console.log('Loading news for country:', currentCountryCode);
-  
   $.ajax({
     url: 'php/getNews.php', data: {country: currentCountryCode}, dataType: 'json',
     success: function(data) {
-      console.log('News API Response:', data);
-      
       if (data?.articles?.length) {
-        console.log('Found', data.articles.length, 'articles');
         var html = data.articles.slice(0, 8).map(article => {
           var authorInfo = article.author ? `<span class="text-muted"> • by ${article.author}</span>` : '';
           var timeInfo = article.publishedAt ? `<span class="text-muted"> • ${article.publishedAt}</span>` : '';
@@ -578,13 +605,10 @@ function loadNewsData() {
         }).join('');
         $('#newsContent').html(html);
       } else {
-        console.log('No articles found in response');
         $('#newsContent').html('<p class="text-center"><i class="fa-solid fa-newspaper me-2"></i>No recent news available for this country</p>');
       }
     },
     error: function(xhr, status, error) {
-      console.error('News API Error:', xhr.responseText);
-      console.error('Status:', status, 'Error:', error);
       $('#newsContent').html('<p class="text-center text-danger"><i class="fa-solid fa-exclamation-triangle me-2"></i>Failed to load news data</p>');
     }
   });
@@ -601,7 +625,7 @@ function loadWikipediaData() {
   // Step 1: Load Wikipedia text quickly (no images)
   $.ajax({
     url: 'php/getWikipedia.php', 
-    data: {country: currentCountryCode}, // No images parameter = fast load
+    data: {country: currentCountryCode},
     dataType: 'json',
     success: function(data) {
       var html = '';
@@ -628,7 +652,7 @@ function loadWikipediaData() {
       
       $('#wikipediaContent').html(html || '<p class="text-center">No Wikipedia information available for this country</p>');
       
-      // Step 2: Load images asynchronously (slower, in background)
+      // Step 2: Load images asynchronously in background the background (this was needed as without lazy loading this on modal click and independently of the text content, it's sluggishness bottlenecked the rest of the app severly)
       loadCountryImages(currentCountryCode);
     },
     error: function() {
@@ -728,7 +752,7 @@ function loadHolidaysData() {
   });
 }
 
-// Map click detection (simplified)
+// Map click detection
 function detectClickedCountry(latlng, clickPosition) {
   if (!allCountryBorders?.features) return;
   
@@ -737,8 +761,8 @@ function detectClickedCountry(latlng, clickPosition) {
   });
   
   for (var feature of sortedFeatures) {
-    var countryCode = feature.properties?.['ISO3166-1-Alpha-2'];
-    if (countryCode && countryCode !== '-99') {
+    var countryCode = getCountryCode(feature);
+    if (countryCode) {
       try {
         if (isPointInCountry(latlng, feature.geometry)) {
           $('#countrySelect').val(countryCode);
@@ -790,4 +814,180 @@ function getBoundingBoxArea(geometry) {
   else if (geometry.type === 'MultiPolygon') geometry.coordinates.forEach(p => updateBounds(p[0]));
   
   return (bounds.maxLat - bounds.minLat) * (bounds.maxLng - bounds.minLng);
+}
+
+// Auto-location detection
+function detectUserLocation() {
+  // Check if geolocation is supported
+  if (!navigator.geolocation) {
+    return;
+  }
+  
+  // Get user's current position
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+      const userLocation = L.latLng(userLat, userLng);
+      
+      // Find which country the user is in
+      findUserCountry(userLocation);
+    },
+    function(error) {
+      handleGeolocationError(error);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 300000 // 5 minutes
+    }
+  );
+}
+
+function findUserCountry(userLocation) {
+  // Wait for country borders to load if not already loaded
+  const checkBorders = () => {
+    if (!allCountryBorders?.features) {
+      setTimeout(checkBorders, 500);
+      return;
+    }
+    
+    // Sort features by area (smallest first) for more accurate detection
+    const sortedFeatures = allCountryBorders.features.slice().sort((a, b) => {
+      return getBoundingBoxArea(a.geometry) - getBoundingBoxArea(b.geometry);
+    });
+    
+    // Check each country to see if user location is inside
+    for (const feature of sortedFeatures) {
+      const countryCode = getCountryCode(feature);
+      
+      if (countryCode) {
+        try {
+          if (isPointInCountry(userLocation, feature.geometry)) {
+            const countryName = feature.properties?.name || countryCode;
+            
+            // Auto-select the user's country
+            highlightUserCountry(countryCode, userLocation);
+            return;
+          }
+        } catch (error) {
+          // Continue checking other countries if one fails
+          continue;
+        }
+      }
+    }
+    
+    showLocationNotFoundMessage(userLocation);
+  };
+  
+  checkBorders();
+}
+
+function highlightUserCountry(countryCode, userLocation) {
+  // Wait for countries list to load
+  const selectCountryWhenReady = () => {
+    if (!allCountries?.length) {
+      setTimeout(selectCountryWhenReady, 500);
+      return;
+    }
+    
+    // Set the dropdown to the detected country
+    $('#countrySelect').val(countryCode);
+    
+    // Automatically select and highlight the country
+    selectCountry(countryCode, userLocation);
+    
+    // Show a brief notification
+    showLocationDetectedMessage(countryCode);
+  };
+  
+  selectCountryWhenReady();
+}
+
+function showLocationDetectedMessage(countryCode) {
+  const countryName = allCountries.find(c => c.code === countryCode)?.name || countryCode;
+  
+  // Create a temporary notification
+  const notification = $(`
+    <div class="alert alert-success alert-dismissible position-fixed" 
+         style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; min-width: 300px;">
+      <i class="fa-solid fa-location-dot me-2"></i>
+      <strong>Location detected:</strong> ${countryName}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `);
+  
+  $('body').append(notification);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => {
+    notification.fadeOut(500, () => notification.remove());
+  }, 5000);
+}
+
+function showLocationNotFoundMessage(userLocation) {
+  // Still center the map on user location even if country not found
+  map.setView([userLocation.lat, userLocation.lng], 8);
+  
+  // Add a marker at user location
+  const userMarker = L.marker([userLocation.lat, userLocation.lng], {
+    icon: L.divIcon({
+      className: 'user-location-marker',
+      html: '<div style="background: #ff4444; border: 3px solid #fff; border-radius: 50%; width: 20px; height: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    })
+  }).addTo(map);
+  
+  userMarker.bindTooltip('Your location', {permanent: false, direction: 'top'});
+  
+  // Show notification
+  const notification = $(`
+    <div class="alert alert-info alert-dismissible position-fixed" 
+         style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; min-width: 350px;">
+      <i class="fa-solid fa-info-circle me-2"></i>
+      <strong>Location detected</strong> but no country match found (possibly over water)
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `);
+  
+  $('body').append(notification);
+  
+  setTimeout(() => {
+    notification.fadeOut(500, () => notification.remove());
+  }, 6000);
+}
+
+function handleGeolocationError(error) {
+  let message = '';
+  
+  switch(error.code) {
+    case error.PERMISSION_DENIED:
+      message = 'Location access denied by user';
+      break;
+    case error.POSITION_UNAVAILABLE:
+      message = 'Location information unavailable';
+      break;
+    case error.TIMEOUT:
+      message = 'Location request timed out';
+      break;
+    default:
+      message = 'Unknown location error';
+      break;
+  }
+  
+  const notification = $(`
+    <div class="alert alert-warning alert-dismissible position-fixed" 
+         style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; min-width: 300px;">
+      <i class="fa-solid fa-exclamation-triangle me-2"></i>
+      ${message}. Please select a country manually.
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `);
+  
+  $('body').append(notification);
+  
+  setTimeout(() => {
+    notification.fadeOut(500, () => notification.remove());
+  }, 4000);
 }
