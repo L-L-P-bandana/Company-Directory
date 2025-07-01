@@ -101,63 +101,6 @@ function getCountrySpecificHolidays($countryCode, $year) {
                 ['name' => 'Martin Luther King Jr. Day', 'date' => $year . '-01-15', 'type' => 'Federal Holiday']
             ];
             break;
-        case 'GB':
-            $holidays = [
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Bank Holiday'],
-                ['name' => 'Boxing Day', 'date' => $year . '-12-26', 'type' => 'Bank Holiday'],
-                ['name' => 'Easter Monday', 'date' => $year . '-04-01', 'type' => 'Bank Holiday'],
-                ['name' => 'Queen\'s Birthday', 'date' => $year . '-06-15', 'type' => 'Bank Holiday']
-            ];
-            break;
-        case 'FR':
-            $holidays = [
-                ['name' => 'Bastille Day', 'date' => $year . '-07-14', 'type' => 'Public Holiday'],
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Public Holiday'],
-                ['name' => 'All Saints\' Day', 'date' => $year . '-11-01', 'type' => 'Public Holiday'],
-                ['name' => 'Armistice Day', 'date' => $year . '-11-11', 'type' => 'Public Holiday']
-            ];
-            break;
-        case 'DE':
-            $holidays = [
-                ['name' => 'German Unity Day', 'date' => $year . '-10-03', 'type' => 'Public Holiday'],
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Public Holiday'],
-                ['name' => 'Good Friday', 'date' => $year . '-03-29', 'type' => 'Public Holiday'],
-                ['name' => 'Easter Monday', 'date' => $year . '-04-01', 'type' => 'Public Holiday']
-            ];
-            break;
-        case 'JP':
-            $holidays = [
-                ['name' => 'Golden Week', 'date' => $year . '-04-29', 'type' => 'National Holiday'],
-                ['name' => 'Cherry Blossom Day', 'date' => $year . '-04-01', 'type' => 'Cultural Holiday'],
-                ['name' => 'New Year Holiday', 'date' => $year . '-01-02', 'type' => 'National Holiday'],
-                ['name' => 'Constitution Day', 'date' => $year . '-05-03', 'type' => 'National Holiday']
-            ];
-            break;
-        case 'CA':
-            $holidays = [
-                ['name' => 'Canada Day', 'date' => $year . '-07-01', 'type' => 'Federal Holiday'],
-                ['name' => 'Thanksgiving', 'date' => $year . '-10-14', 'type' => 'Federal Holiday'],
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Federal Holiday'],
-                ['name' => 'Victoria Day', 'date' => $year . '-05-20', 'type' => 'Federal Holiday']
-            ];
-            break;
-        case 'AU':
-            $holidays = [
-                ['name' => 'Australia Day', 'date' => $year . '-01-26', 'type' => 'Public Holiday'],
-                ['name' => 'ANZAC Day', 'date' => $year . '-04-25', 'type' => 'Public Holiday'],
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Public Holiday'],
-                ['name' => 'Boxing Day', 'date' => $year . '-12-26', 'type' => 'Public Holiday']
-            ];
-            break;
-        default:
-            // Generic holidays for other countries
-            $holidays = [
-                ['name' => 'National Day', 'date' => $year . '-08-15', 'type' => 'Public Holiday'],
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Public Holiday'],
-                ['name' => 'Easter Sunday', 'date' => $year . '-03-31', 'type' => 'Religious Holiday'],
-                ['name' => 'Independence Day', 'date' => $year . '-09-21', 'type' => 'National Holiday']
-            ];
-            break;
     }
     
     return $holidays;

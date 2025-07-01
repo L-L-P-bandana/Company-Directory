@@ -73,10 +73,6 @@ try {
     // Fallback data
     $fallbackData = [
         'AL' => ['temperature' => '19°C', 'condition' => 'Clear', 'humidity' => '68%'],
-        'US' => ['temperature' => '22°C', 'condition' => 'Partly Cloudy', 'humidity' => '65%'],
-        'GB' => ['temperature' => '15°C', 'condition' => 'Rainy', 'humidity' => '78%'],
-        'FR' => ['temperature' => '18°C', 'condition' => 'Sunny', 'humidity' => '55%'],
-        'DE' => ['temperature' => '16°C', 'condition' => 'Overcast', 'humidity' => '72%']
     ];
     
     $countryCode = isset($countryCode) ? $countryCode : 'UNKNOWN';

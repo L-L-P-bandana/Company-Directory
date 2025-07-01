@@ -129,38 +129,6 @@ function getCountrySpecificNews($countryName, $countryCode) {
                 'url' => 'https://example.com/fed-news'
             ];
             break;
-        case 'GB':
-            $specific[] = [
-                'title' => 'UK Parliament Discusses New Trade Agreements',
-                'description' => 'British lawmakers are debating new international trade agreements in Parliament today.',
-                'source' => 'BBC News',
-                'url' => 'https://example.com/uk-trade'
-            ];
-            break;
-        case 'FR':
-            $specific[] = [
-                'title' => 'France Hosts International Climate Summit',
-                'description' => 'French officials are hosting world leaders for discussions on climate change policies.',
-                'source' => 'Environmental News',
-                'url' => 'https://example.com/climate-summit'
-            ];
-            break;
-        case 'DE':
-            $specific[] = [
-                'title' => 'German Manufacturing Output Increases',
-                'description' => 'Industrial production in Germany shows strong growth according to latest statistics.',
-                'source' => 'Manufacturing Today',
-                'url' => 'https://example.com/german-manufacturing'
-            ];
-            break;
-        case 'JP':
-            $specific[] = [
-                'title' => 'Japan Advances Robotics Technology',
-                'description' => 'Japanese companies unveil next-generation robotics innovations at Tokyo tech expo.',
-                'source' => 'Robotics News',
-                'url' => 'https://example.com/japan-robotics'
-            ];
-            break;
     }
     
     return $specific;

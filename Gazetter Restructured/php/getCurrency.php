@@ -98,14 +98,7 @@ try {
     
     // Fallback data
     $fallbackData = [
-        'AL' => ['name' => 'Albanian Lek', 'code' => 'ALL', 'rate' => '107.45'],
         'US' => ['name' => 'US Dollar', 'code' => 'USD', 'rate' => '1.00'],
-        'GB' => ['name' => 'British Pound', 'code' => 'GBP', 'rate' => '0.79'],
-        'FR' => ['name' => 'Euro', 'code' => 'EUR', 'rate' => '0.92'],
-        'DE' => ['name' => 'Euro', 'code' => 'EUR', 'rate' => '0.92'],
-        'CA' => ['name' => 'Canadian Dollar', 'code' => 'CAD', 'rate' => '1.36'],
-        'AU' => ['name' => 'Australian Dollar', 'code' => 'AUD', 'rate' => '1.54'],
-        'JP' => ['name' => 'Japanese Yen', 'code' => 'JPY', 'rate' => '149.34']
     ];
     
     $countryCode = isset($countryCode) ? $countryCode : 'UNKNOWN';
@@ -125,25 +118,7 @@ function generateExchangeRate($currencyCode) {
     // Generate realistic exchange rates based on currency patterns
     $rates = [
         'EUR' => '0.92',
-        'GBP' => '0.79', 
-        'JPY' => '149.34',
-        'CAD' => '1.36',
-        'AUD' => '1.54',
-        'CHF' => '0.88',
-        'CNY' => '7.24',
-        'INR' => '83.12',
-        'BRL' => '5.12',
-        'RUB' => '92.65',
-        'ZAR' => '18.45',
-        'MXN' => '17.23',
-        'KRW' => '1320.45',
-        'SGD' => '1.35',
-        'HKD' => '7.85',
-        'NOK' => '10.67',
-        'SEK' => '10.89',
-        'DKK' => '6.87',
-        'PLN' => '4.23',
-        'CZK' => '22.45'
+
     ];
     
     if (isset($rates[$currencyCode])) {

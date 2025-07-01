@@ -80,23 +80,11 @@ try {
     $countryCode = isset($countryCode) ? $countryCode : 'UNKNOWN';
     
     $fallbackData = [
-        'AL' => [
-            'population' => '2,838,000',
-            'area' => '28,748 km²',
-            'capital' => 'Tirana',
-            'region' => 'Europe'
-        ],
         'US' => [
             'population' => '331,900,000',
             'area' => '9,833,517 km²',
             'capital' => 'Washington, D.C.',
             'region' => 'North America'
-        ],
-        'GB' => [
-            'population' => '67,886,000',
-            'area' => '242,495 km²',
-            'capital' => 'London',
-            'region' => 'Europe'
         ]
     ];
     

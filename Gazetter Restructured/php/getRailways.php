@@ -156,26 +156,6 @@ function generateFallbackRailways($countryCode) {
             ['name' => 'Grand Central Terminal', 'lat' => 40.7527, 'lng' => -73.9772],
             ['name' => 'Union Station Chicago', 'lat' => 41.8789, 'lng' => -87.6359],
             ['name' => 'Penn Station NYC', 'lat' => 40.7505, 'lng' => -73.9934]
-        ],
-        'GB' => [
-            ['name' => 'London King\'s Cross', 'lat' => 51.5308, 'lng' => -0.1238],
-            ['name' => 'Edinburgh Waverley', 'lat' => 55.9520, 'lng' => -3.1883],
-            ['name' => 'Manchester Piccadilly', 'lat' => 53.4776, 'lng' => -2.2309]
-        ],
-        'FR' => [
-            ['name' => 'Gare du Nord Paris', 'lat' => 48.8809, 'lng' => 2.3553],
-            ['name' => 'Gare de Lyon Paris', 'lat' => 48.8447, 'lng' => 2.3736],
-            ['name' => 'Marseille-Saint-Charles', 'lat' => 43.3032, 'lng' => 5.3807]
-        ],
-        'DE' => [
-            ['name' => 'Berlin Hauptbahnhof', 'lat' => 52.5251, 'lng' => 13.3694],
-            ['name' => 'München Hauptbahnhof', 'lat' => 48.1403, 'lng' => 11.5583],
-            ['name' => 'Hamburg Hauptbahnhof', 'lat' => 53.5527, 'lng' => 10.0069]
-        ],
-        'JP' => [
-            ['name' => 'Tokyo Station', 'lat' => 35.6812, 'lng' => 139.7671],
-            ['name' => 'Shinjuku Station', 'lat' => 35.6896, 'lng' => 139.7006],
-            ['name' => 'Osaka Station', 'lat' => 34.7024, 'lng' => 135.4959]
         ]
     ];
     
