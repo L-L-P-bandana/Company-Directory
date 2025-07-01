@@ -14,7 +14,7 @@ try {
     $countryCode = strtoupper($_GET['country']);
     logError("Fetching data for country: " . $countryCode);
     
-    // Use REST Countries API
+    // REST Countries API
     $apiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
     
     logError("Calling API: " . $apiUrl);
@@ -49,7 +49,7 @@ try {
     // Format area
     $area = isset($country['area']) ? number_format($country['area']) . ' km²' : 'N/A';
     
-    // Get capital (handle array format)
+    // Get capital
     $capital = 'N/A';
     if (isset($country['capital']) && is_array($country['capital'])) {
         $capital = $country['capital'][0];
@@ -76,7 +76,7 @@ try {
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
     
-    // Fallback to dummy data if API fails
+    // Fallback dummy data 
     $countryCode = isset($countryCode) ? $countryCode : 'UNKNOWN';
     
     $fallbackData = [

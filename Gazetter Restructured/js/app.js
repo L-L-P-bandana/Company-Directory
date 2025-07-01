@@ -1,6 +1,6 @@
 var map, currentCountryCode = '', countryBorder = null, allCountryBorders = null, allCountries = [];
 var searchResults = [], selectedSearchIndex = -1, visitedCountries = [], maxMarkers = 50;
-var currentCurrencyData = null;
+var currentCurrencyData = null, globalExchangeRates = null;
 
 // Marker groups
 var countryMarkers = L.layerGroup();
@@ -126,8 +126,68 @@ $(document).ready(function() {
 
 // Currency Converter Setup
 function setupCurrencyConverter() {
-  $('#convertBtn, #convertAmount, #toCurrency').on('click change input', performConversion);
-  $('#toCurrency').val('USD'); // Default to USD
+  loadGlobalExchangeRates();
+  $('#convertBtn, #convertAmount, #fromCurrency, #toCurrency').on('click change input', performConversion);
+  $('#fromCurrency').on('change', updateAmountSymbol);
+}
+
+function loadGlobalExchangeRates() {
+  $.ajax({
+    url: 'php/getCurrency.php',
+    data: {action: 'getAllRates'},
+    dataType: 'json',
+    success: function(data) {
+      if (data.error) {
+        console.error('Exchange rate API error:', data.message);
+        $('#convertResult').text('Exchange rates unavailable');
+        return;
+      }
+      
+      globalExchangeRates = data;
+      populateCurrencySelectors(data.currencies);
+      console.log('Loaded exchange rates for', Object.keys(data.rates).length, 'currencies');
+    },
+    error: function() {
+      console.error('Failed to load exchange rates');
+      $('#convertResult').text('Exchange rates unavailable');
+    }
+  });
+}
+
+function populateCurrencySelectors(currencies) {
+  // Populate both FROM and TO currency dropdowns with all currencies
+  var fromOptions = '<option value="">Select currency...</option>';
+  var toOptions = '<option value="">Select currency...</option>';
+  
+  currencies.forEach(function(currency) {
+    var option = `<option value="${currency.code}">${currency.name} (${currency.code}) ${currency.symbol}</option>`;
+    fromOptions += option;
+    toOptions += option;
+  });
+  
+  $('#fromCurrency').html(fromOptions);
+  $('#toCurrency').html(toOptions);
+  
+  // Set default TO currency to USD
+  $('#toCurrency').val('USD');
+  
+  // If we have a current country selected, set FROM to that country's currency
+  if (currentCountryCode && currentCurrencyData) {
+    $('#fromCurrency').val(currentCurrencyData.code);
+    updateAmountSymbol();
+  }
+}
+
+function updateAmountSymbol() {
+  var fromCode = $('#fromCurrency').val();
+  if (fromCode && globalExchangeRates && globalExchangeRates.currencies) {
+    var fromCurrency = globalExchangeRates.currencies.find(c => c.code === fromCode);
+    if (fromCurrency) {
+      $('#amountLabel').text(`Amount (${fromCode} - ${fromCurrency.symbol})`);
+    }
+  } else {
+    $('#amountLabel').text('Amount');
+  }
 }
 
 function performConversion() {
@@ -135,27 +195,22 @@ function performConversion() {
   var fromCode = $('#fromCurrency').val();
   var toCode = $('#toCurrency').val();
   
-  if (!amount || !fromCode || !toCode || !currentCurrencyData) {
-    $('#convertResult').text('Enter valid amount');
+  if (!amount || !fromCode || !toCode || !globalExchangeRates) {
+    $('#convertResult').text('Enter valid amount and select currencies');
     return;
   }
   
-  // Simple conversion using exchange rates (from country currency to USD, then to target)
-  var fromRate = parseFloat(currentCurrencyData.rate) || 1;
-  var toRate = getExchangeRate(toCode);
+  var fromRate = globalExchangeRates.rates[fromCode] || 1;
+  var toRate = globalExchangeRates.rates[toCode] || 1;
   
+  // Convert: amount in fromCurrency -> USD -> toCurrency
   var usdAmount = fromCode === 'USD' ? amount : amount / fromRate;
   var result = toCode === 'USD' ? usdAmount : usdAmount * toRate;
   
-  $('#convertResult').text(result.toFixed(2) + ' ' + toCode);
-}
-
-function getExchangeRate(code) {
-  var rates = {
-    'USD': 1, 'EUR': 0.92, 'GBP': 0.79, 'JPY': 149.34, 'CAD': 1.36, 
-    'AUD': 1.54, 'CHF': 0.88, 'CNY': 7.24
-  };
-  return rates[code] || 1;
+  var fromSymbol = globalExchangeRates.currencies.find(c => c.code === fromCode)?.symbol || fromCode;
+  var toSymbol = globalExchangeRates.currencies.find(c => c.code === toCode)?.symbol || toCode;
+  
+  $('#convertResult').html(`${toSymbol}${result.toFixed(2)}`);
 }
 
 // Marker management
@@ -442,7 +497,6 @@ function loadCountryData() {
 function loadCurrencyData() {
   if (!currentCountryCode) {
     $('#currencyName, #currencyCode, #exchangeRate').text('Select a country first');
-    $('#fromCurrency').html('<option value="">Select a country first</option>');
     return;
   }
   
@@ -454,26 +508,38 @@ function loadCurrencyData() {
       $('#currencyCode').text(data.code || 'N/A');
       $('#exchangeRate').text(data.rate || 'N/A');
       
-      // Update converter
-      $('#fromCurrency').html(`<option value="${data.code}">${data.name} (${data.code})</option>`);
-      $('#convertAmount').val('1');
-      performConversion();
+      // Set the FROM currency to the country's currency (but don't replace all options)
+      if (globalExchangeRates && globalExchangeRates.currencies) {
+        $('#fromCurrency').val(data.code);
+        updateAmountSymbol(); // Update the amount field symbol
+      }
+      
+      // Trigger conversion if both currencies are selected
+      if ($('#fromCurrency').val() && $('#toCurrency').val()) {
+        performConversion();
+      }
     }
   });
 }
 
 function loadWeatherData() {
   if (!currentCountryCode) {
-    $('#temperature, #condition, #humidity').text('Select a country first');
+    $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed').text('Select a country first');
     return;
   }
   
   $.ajax({
     url: 'php/getWeather.php', data: {country: currentCountryCode}, dataType: 'json',
-    success: data => {
+    success: function(data) {
       $('#temperature').text(data.temperature || 'N/A');
       $('#condition').text(data.condition || 'N/A');
       $('#humidity').text(data.humidity || 'N/A');
+      $('#feelsLike').text(data.feels_like || 'N/A');
+      $('#pressure').text(data.pressure || 'N/A');
+      $('#windSpeed').text(data.wind_speed || 'N/A');
+    },
+    error: function() {
+      $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed').text('Weather data unavailable');
     }
   });
 }
@@ -486,22 +552,40 @@ function loadNewsData() {
   
   $('#newsContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading latest news...</p></div>');
   
+  console.log('Loading news for country:', currentCountryCode);
+  
   $.ajax({
     url: 'php/getNews.php', data: {country: currentCountryCode}, dataType: 'json',
     success: function(data) {
+      console.log('News API Response:', data);
+      
       if (data?.articles?.length) {
-        var html = data.articles.slice(0, 5).map(article => 
-          `<div class="mb-3 pb-3 border-bottom">
-            <h6 class="fw-bold">${article.title || 'No title'}</h6>
-            <p class="small text-muted mb-2">${article.source || 'Unknown source'}</p>
+        console.log('Found', data.articles.length, 'articles');
+        var html = data.articles.slice(0, 8).map(article => {
+          var authorInfo = article.author ? `<span class="text-muted"> • by ${article.author}</span>` : '';
+          var timeInfo = article.publishedAt ? `<span class="text-muted"> • ${article.publishedAt}</span>` : '';
+          
+          return `<div class="mb-3 pb-3 border-bottom">
+            <h6 class="fw-bold mb-2">${article.title || 'No title'}</h6>
+            <p class="small text-muted mb-2">
+              <i class="fa-solid fa-newspaper me-1"></i>${article.source || 'Unknown source'}${authorInfo}${timeInfo}
+            </p>
             <p class="mb-2">${article.description || 'No description available'}</p>
-            ${article.url ? `<a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-success">Read More</a>` : ''}
-          </div>`
-        ).join('');
+            ${article.url ? `<a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-success">
+              <i class="fa-solid fa-external-link me-1"></i>Read Full Article
+            </a>` : ''}
+          </div>`;
+        }).join('');
         $('#newsContent').html(html);
       } else {
-        $('#newsContent').html('<p class="text-center">No recent news available for this country</p>');
+        console.log('No articles found in response');
+        $('#newsContent').html('<p class="text-center"><i class="fa-solid fa-newspaper me-2"></i>No recent news available for this country</p>');
       }
+    },
+    error: function(xhr, status, error) {
+      console.error('News API Error:', xhr.responseText);
+      console.error('Status:', status, 'Error:', error);
+      $('#newsContent').html('<p class="text-center text-danger"><i class="fa-solid fa-exclamation-triangle me-2"></i>Failed to load news data</p>');
     }
   });
 }

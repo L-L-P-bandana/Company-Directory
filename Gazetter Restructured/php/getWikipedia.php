@@ -14,7 +14,7 @@ try {
     $countryCode = strtoupper($_GET['country']);
     logError("Fetching Wikipedia data for country: " . $countryCode);
     
-    // First, get country name from REST Countries API
+    // Get country name from REST Countries API
     $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
     
     $context = stream_context_create([
@@ -109,7 +109,7 @@ function fetchWikipediaData($countryName) {
 
 function fetchCountryImages($countryName) {
     try {
-        // Use a simple approach - generate placeholder images with country-specific URLs
+        // generate placeholder images with country-specific URLs
         $images = [];
         
         // For demo purposes, we'll create placeholder images

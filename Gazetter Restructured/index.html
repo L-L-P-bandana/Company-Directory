@@ -103,6 +103,21 @@
                             <td>Humidity</td>
                             <td class="text-end" id="humidity">Loading...</td>
                         </tr>
+                        <tr>
+                            <td class="text-center"><i class="fa-solid fa-temperature-high fa-xl text-success"></i></td>
+                            <td>Feels Like</td>
+                            <td class="text-end" id="feelsLike">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center"><i class="fa-solid fa-gauge fa-xl text-success"></i></td>
+                            <td>Pressure</td>
+                            <td class="text-end" id="pressure">Loading...</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center"><i class="fa-solid fa-wind fa-xl text-success"></i></td>
+                            <td>Wind Speed</td>
+                            <td class="text-end" id="windSpeed">Loading...</td>
+                        </tr>
                     </table>
                 </div>
                 <div class="modal-footer">
@@ -112,7 +127,7 @@
         </div>
     </div>
 
-    <!-- Currency Modal with Converter -->
+    <!-- Currency Modal + Converter -->
     <div id="currencyModal" class="modal" data-bs-backdrop="false" tabindex="-1" aria-labelledby="currencyModalLabel">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content shadow">
@@ -142,33 +157,27 @@
 
                     <!-- Currency Converter -->
                     <div class="border-top pt-4">
-                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-calculator text-success me-2"></i>Currency Converter</h6>
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-calculator text-success me-2"></i>Global Currency Converter</h6>
+                        <p class="small text-muted mb-3">Convert between any world currencies using live exchange rates</p>
                         
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label small">From</label>
+                                <label class="form-label small">From Currency</label>
                                 <select id="fromCurrency" class="form-select form-select-sm">
-                                    <option value="">Loading...</option>
+                                    <option value="">Loading currencies...</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small">To</label>
+                                <label class="form-label small">To Currency</label>
                                 <select id="toCurrency" class="form-select form-select-sm">
-                                    <option value="USD">US Dollar (USD)</option>
-                                    <option value="EUR">Euro (EUR)</option>
-                                    <option value="GBP">British Pound (GBP)</option>
-                                    <option value="JPY">Japanese Yen (JPY)</option>
-                                    <option value="CAD">Canadian Dollar (CAD)</option>
-                                    <option value="AUD">Australian Dollar (AUD)</option>
-                                    <option value="CHF">Swiss Franc (CHF)</option>
-                                    <option value="CNY">Chinese Yuan (CNY)</option>
+                                    <option value="">Loading currencies...</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="row g-3 mt-2">
                             <div class="col-md-6">
-                                <label class="form-label small">Amount</label>
+                                <label class="form-label small" id="amountLabel">Amount</label>
                                 <input type="number" id="convertAmount" class="form-control form-control-sm" value="1" min="0" step="0.01">
                             </div>
                             <div class="col-md-6">

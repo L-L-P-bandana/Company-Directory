@@ -33,12 +33,12 @@ try {
         if (isset($feature['properties'])) {
             $props = $feature['properties'];
             
-            // Use the exact property names from your GeoJSON file
+            // Use the exact property names from the GeoJSON file
             if (isset($props['ISO3166-1-Alpha-2']) && isset($props['name'])) {
                 $countryCode = $props['ISO3166-1-Alpha-2'];
                 $countryName = $props['name'];
                 
-                // Make sure we have valid data
+                // Make sure I've got valid data
                 if (!empty($countryCode) && !empty($countryName)) {
                     $countries[] = [
                         'code' => strtoupper($countryCode),
@@ -56,12 +56,12 @@ try {
     
     logError("Processed " . count($countries) . " valid countries");
     
-    // Sort countries by name
+    // Sort by name
     usort($countries, function($a, $b) {
         return strcmp($a['name'], $b['name']);
     });
     
-    // Log some sample countries
+    // Log sample countries
     if (count($countries) > 0) {
         logError("Sample countries: " . $countries[0]['code'] . " - " . $countries[0]['name']);
         if (count($countries) > 1) {

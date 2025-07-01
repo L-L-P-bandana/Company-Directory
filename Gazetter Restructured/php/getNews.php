@@ -14,6 +14,9 @@ try {
     $countryCode = strtoupper($_GET['country']);
     logError("Fetching news for country: " . $countryCode);
     
+    // News API key
+    $apiKey = "624c7b4a70024c34a7d20bce1e34daaa";
+    
     // First, get country name from REST Countries API
     $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
     
@@ -41,110 +44,131 @@ try {
     
     logError("Country name: " . $countryName);
     
-    // Try to fetch real news using a free news API
-    $newsArticles = [];
-    
-    try {
-        // Use NewsAPI.org (requires API key) - or we'll simulate realistic news
-        // For demo purposes, we'll generate realistic news articles
-        $newsArticles = generateNewsArticles($countryName, $countryCode);
-        
-    } catch (Exception $ex) {
-        logError("News API error: " . $ex->getMessage());
-        $newsArticles = generateNewsArticles($countryName, $countryCode);
-    }
+    // Fetch real news from News API
+    $articles = fetchRealNews($countryCode, $countryName, $apiKey);
     
     $result = [
         'country' => $countryName,
-        'articles' => $newsArticles
+        'articles' => $articles
     ];
     
-    logError("News data prepared for: " . $countryName);
+    logError("News data prepared for: " . $countryName . " (" . count($articles) . " articles)");
     echo json_encode($result);
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
     
-    // Fallback news data
-    $fallbackNews = generateFallbackNews($countryCode);
-    echo json_encode($fallbackNews);
+    // NO FALLBACK DATA - return error response
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'News API unavailable',
+        'message' => $e->getMessage(),
+        'country' => isset($countryName) ? $countryName : 'Unknown',
+        'articles' => []
+    ]);
 }
 
-function generateNewsArticles($countryName, $countryCode) {
-    // Generate realistic news articles based on country
-    $articles = [];
-    
-    $newsTemplates = [
-        [
-            'title' => $countryName . ' Economy Shows Growth in Latest Quarter',
-            'description' => 'Economic indicators suggest positive trends in ' . $countryName . ' as trade and investment continue to expand.',
-            'source' => 'Economic Times',
-            'url' => 'https://example.com/economy-news'
-        ],
-        [
-            'title' => 'Tourism Sector Rebounds in ' . $countryName,
-            'description' => 'The tourism industry in ' . $countryName . ' is experiencing a significant recovery with increased visitor numbers.',
-            'source' => 'Travel News',
-            'url' => 'https://example.com/tourism-news'
-        ],
-        [
-            'title' => $countryName . ' Announces New Infrastructure Projects',
-            'description' => 'Government officials in ' . $countryName . ' have unveiled plans for major infrastructure development initiatives.',
-            'source' => 'Infrastructure Daily',
-            'url' => 'https://example.com/infrastructure-news'
-        ],
-        [
-            'title' => 'Cultural Festival Celebrates Heritage in ' . $countryName,
-            'description' => 'Traditional celebrations and cultural events highlight the rich heritage of ' . $countryName . ' in this annual festival.',
-            'source' => 'Culture Today',
-            'url' => 'https://example.com/culture-news'
-        ],
-        [
-            'title' => 'Technology Sector Expansion in ' . $countryName,
-            'description' => 'New technology companies are establishing operations in ' . $countryName . ', boosting the digital economy.',
-            'source' => 'Tech Weekly',
-            'url' => 'https://example.com/tech-news'
-        ]
-    ];
-    
-    // Add country-specific news based on country code
-    $countrySpecific = getCountrySpecificNews($countryName, $countryCode);
-    if (!empty($countrySpecific)) {
-        $newsTemplates = array_merge($countrySpecific, $newsTemplates);
-    }
-    
-    // Return a subset of articles
-    return array_slice($newsTemplates, 0, 5);
-}
-
-function getCountrySpecificNews($countryName, $countryCode) {
-    $specific = [];
-    
-    switch ($countryCode) {
-        case 'US':
-            $specific[] = [
-                'title' => 'Federal Reserve Announces Interest Rate Decision',
-                'description' => 'The Federal Reserve has made its latest decision on interest rates, impacting the US economy.',
-                'source' => 'Financial News',
-                'url' => 'https://example.com/fed-news'
-            ];
-            break;
-    }
-    
-    return $specific;
-}
-
-function generateFallbackNews($countryCode) {
-    return [
-        'country' => 'Unknown',
-        'articles' => [
-            [
-                'title' => 'News Service Temporarily Unavailable',
-                'description' => 'We apologize, but the news service is currently unavailable. Please try again later.',
-                'source' => 'System Notice',
-                'url' => ''
+function fetchRealNews($countryCode, $countryName, $apiKey) {
+    try {
+        // News API Top Headlines endpoint
+        $newsApiUrl = "https://newsapi.org/v2/top-headlines?" . http_build_query([
+            'country' => strtolower($countryCode),
+            'apiKey' => $apiKey,
+            'pageSize' => 10, // Get up to 10 articles
+            'sortBy' => 'publishedAt'
+        ]);
+        
+        logError("Calling News API: " . $newsApiUrl);
+        
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 15,
+                'header' => [
+                    'User-Agent: Gazetteer/1.0',
+                    'Accept: application/json'
+                ]
             ]
-        ]
-    ];
+        ]);
+        
+        $response = file_get_contents($newsApiUrl, false, $context);
+        
+        if ($response === false) {
+            throw new Exception('Failed to fetch news from News API');
+        }
+        
+        $newsData = json_decode($response, true);
+        
+        if (!$newsData) {
+            throw new Exception('Invalid response from News API');
+        }
+        
+        // Check for API errors
+        if (isset($newsData['status']) && $newsData['status'] !== 'ok') {
+            $errorMessage = isset($newsData['message']) ? $newsData['message'] : 'Unknown News API error';
+            throw new Exception('News API error: ' . $errorMessage);
+        }
+        
+        // Check if articles exist
+        if (!isset($newsData['articles']) || empty($newsData['articles'])) {
+            logError("No articles found for country: " . $countryCode);
+            return [];
+        }
+        
+        $articles = [];
+        
+        foreach ($newsData['articles'] as $article) {
+            // Skip articles with missing essential data
+            if (empty($article['title']) || $article['title'] === '[Removed]') {
+                continue;
+            }
+            
+            $articles[] = [
+                'title' => $article['title'] ?? 'No title available',
+                'description' => !empty($article['description']) && $article['description'] !== '[Removed]' 
+                    ? $article['description'] 
+                    : 'Full article available at source',
+                'source' => isset($article['source']['name']) ? $article['source']['name'] : 'Unknown source',
+                'url' => !empty($article['url']) ? $article['url'] : '',
+                'publishedAt' => isset($article['publishedAt']) ? formatPublishDate($article['publishedAt']) : '',
+                'author' => !empty($article['author']) && $article['author'] !== '[Removed]' 
+                    ? $article['author'] 
+                    : null
+            ];
+        }
+        
+        logError("Successfully processed " . count($articles) . " news articles");
+        return $articles;
+        
+    } catch (Exception $e) {
+        logError("News API error: " . $e->getMessage());
+        
+        // NO FALLBACK DATA - throw the exception
+        throw $e;
+    }
+}
+
+function formatPublishDate($dateString) {
+    try {
+        $date = new DateTime($dateString);
+        $now = new DateTime();
+        $diff = $now->diff($date);
+        
+        if ($diff->days == 0) {
+            if ($diff->h == 0) {
+                return $diff->i . ' minutes ago';
+            } else {
+                return $diff->h . ' hours ago';
+            }
+        } elseif ($diff->days == 1) {
+            return 'Yesterday';
+        } elseif ($diff->days < 7) {
+            return $diff->days . ' days ago';
+        } else {
+            return $date->format('M j, Y');
+        }
+    } catch (Exception $e) {
+        return 'Recently';
+    }
 }
 ?>

@@ -14,7 +14,7 @@ try {
     $countryCode = strtoupper($_GET['country']);
     logError("Fetching holidays for country: " . $countryCode);
     
-    // First, get country name from REST Countries API
+    // Get country name from REST Countries API
     $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
     
     $context = stream_context_create([
@@ -41,81 +41,97 @@ try {
     
     logError("Country name: " . $countryName);
     
-    // Generate realistic holiday data (could integrate with Calendarific API or similar)
-    $holidays = generateHolidayData($countryName, $countryCode);
+    // Fetch real holidays from Nager.Date API
+    $holidays = fetchRealHolidays($countryCode);
     
     $result = [
         'country' => $countryName,
         'holidays' => $holidays
     ];
     
-    logError("Holiday data prepared for: " . $countryName);
+    logError("Holiday data prepared for: " . $countryName . " (" . count($holidays) . " holidays)");
     echo json_encode($result);
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
     
-    // Fallback data
-    echo json_encode(generateFallbackHolidays($countryCode));
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'Holiday API unavailable',
+        'message' => $e->getMessage(),
+        'country' => isset($countryName) ? $countryName : 'Unknown',
+        'holidays' => []
+    ]);
 }
 
-function generateHolidayData($countryName, $countryCode) {
-    $currentYear = date('Y');
-    $holidays = [];
-    
-    // Universal holidays that most countries observe
-    $holidays[] = [
-        'name' => 'New Year\'s Day',
-        'date' => $currentYear . '-01-01',
-        'type' => 'Public Holiday'
-    ];
-    
-    // Add country-specific holidays
-    $countrySpecific = getCountrySpecificHolidays($countryCode, $currentYear);
-    $holidays = array_merge($holidays, $countrySpecific);
-    
-    // Add some common seasonal holidays
-    $holidays[] = [
-        'name' => 'International Workers\' Day',
-        'date' => $currentYear . '-05-01',
-        'type' => 'Public Holiday'
-    ];
-    
-    // Sort by date
-    usort($holidays, function($a, $b) {
-        return strcmp($a['date'], $b['date']);
-    });
-    
-    return array_slice($holidays, 0, 8); // Return up to 8 holidays
-}
-
-function getCountrySpecificHolidays($countryCode, $year) {
-    $holidays = [];
-    
-    switch ($countryCode) {
-        case 'US':
-            $holidays = [
-                ['name' => 'Independence Day', 'date' => $year . '-07-04', 'type' => 'Federal Holiday'],
-                ['name' => 'Thanksgiving', 'date' => $year . '-11-28', 'type' => 'Federal Holiday'],
-                ['name' => 'Christmas Day', 'date' => $year . '-12-25', 'type' => 'Federal Holiday'],
-                ['name' => 'Martin Luther King Jr. Day', 'date' => $year . '-01-15', 'type' => 'Federal Holiday']
-            ];
-            break;
-    }
-    
-    return $holidays;
-}
-
-function generateFallbackHolidays($countryCode) {
-    return [
-        'country' => 'Unknown',
-        'holidays' => [
-            [
-                'name' => 'Holiday Service Unavailable',
-                'date' => date('Y') . '-01-01',
-                'type' => 'System Notice'
+function fetchRealHolidays($countryCode) {
+    try {
+        $currentYear = date('Y');
+        
+        // Nager.Date API
+        $holidayApiUrl = "https://date.nager.at/api/v3/PublicHolidays/" . $currentYear . "/" . $countryCode;
+        
+        logError("Calling Nager.Date API: " . $holidayApiUrl);
+        
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 15,
+                'user_agent' => 'Gazetteer/1.0'
             ]
-        ]
-    ];
+        ]);
+        
+        $response = file_get_contents($holidayApiUrl, false, $context);
+        
+        if ($response === false) {
+            throw new Exception('Failed to fetch holidays from Nager.Date API');
+        }
+        
+        $holidaysData = json_decode($response, true);
+        
+        if (!$holidaysData) {
+            throw new Exception('Invalid response from holidays API');
+        }
+        
+        if (empty($holidaysData)) {
+            logError("No holidays found for country: " . $countryCode . " (country may not be supported by API)");
+            return [];
+        }
+        
+        $holidays = [];
+        
+        foreach ($holidaysData as $holiday) {
+            $holidays[] = [
+                'name' => $holiday['name'] ?? 'Unknown Holiday',
+                'date' => $holiday['date'] ?? '',
+                'type' => getHolidayType($holiday)
+            ];
+        }
+        
+        // Sort holidays by date
+        usort($holidays, function($a, $b) {
+            return strcmp($a['date'], $b['date']);
+        });
+        
+        logError("Successfully processed " . count($holidays) . " holidays");
+        return $holidays;
+        
+    } catch (Exception $e) {
+        logError("Holiday API error: " . $e->getMessage());
+        
+        throw $e;
+    }
+}
+
+function getHolidayType($holiday) {
+    // Determine holiday type based on API response
+    if (isset($holiday['global']) && $holiday['global']) {
+        return 'National Public Holiday';
+    } elseif (isset($holiday['counties']) && !empty($holiday['counties'])) {
+        return 'Regional Holiday';
+    } elseif (isset($holiday['type'])) {
+        return ucfirst($holiday['type']) . ' Holiday';
+    } else {
+        return 'Public Holiday';
+    }
 }
 ?>

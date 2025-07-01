@@ -15,7 +15,7 @@ try {
     logError("Fetching ports for country: " . $countryCode);
     
     // GeoNames API configuration
-    $geonamesUsername = 'thisismypassword'; // Your actual GeoNames username
+    $geonamesUsername = 'thisismypassword';
     
     // Fetch real ports from GeoNames API
     $ports = fetchGeoNamesPorts($countryCode, $geonamesUsername);
@@ -25,7 +25,6 @@ try {
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
-    // Minimal fallback only if API completely fails
     echo json_encode([]);
 }
 
@@ -92,14 +91,13 @@ function fetchGeoNamesPorts($countryCode, $username) {
         
     } catch (Exception $e) {
         logError("GeoNames API error: " . $e->getMessage());
-        // Try fallback search
         return fetchAlternativePorts($countryCode, $username);
     }
 }
 
 function fetchAlternativePorts($countryCode, $username) {
     try {
-        // Try searching for harbors
+        // Searching for harbors
         $apiUrl = "http://api.geonames.org/searchJSON?" . http_build_query([
             'country' => $countryCode,
             'fcode' => 'HBR', // Harbor feature code

@@ -14,7 +14,10 @@ try {
     $countryCode = strtoupper($_GET['country']);
     logError("Fetching weather for country: " . $countryCode);
     
-    // First, get country info to find capital city
+    // OpenWeatherMap API key
+    $apiKey = "633c784df32af33d2e4fbb39d138ce4f";
+    
+    // Get country info to find capital city
     $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
     
     $context = stream_context_create([
@@ -44,100 +47,93 @@ try {
         $capital = $countryData[0]['capital'];
     }
     
+    if ($capital === 'Unknown') {
+        throw new Exception('Could not determine capital city for weather data');
+    }
+    
     logError("Capital city: " . $capital);
     
-    // For now, we'll use a free weather API alternative or generate realistic data
-    // OpenWeatherMap requires API key, so we'll use a pattern-based approach
+    // Get weather data from OpenWeatherMap
+    $weatherData = fetchRealWeatherData($capital, $countryCode, $apiKey);
     
-    // Get coordinates if available
-    $lat = isset($countryData[0]['latlng'][0]) ? $countryData[0]['latlng'][0] : 0;
-    $lng = isset($countryData[0]['latlng'][1]) ? $countryData[0]['latlng'][1] : 0;
-    
-    // Generate realistic weather based on location
-    $temperature = generateTemperature($lat, $lng);
-    $condition = generateCondition($lat, $lng);
-    $humidity = generateHumidity($lat, $lng);
-    
-    $result = [
-        'temperature' => $temperature . '°C',
-        'condition' => $condition,
-        'humidity' => $humidity . '%'
-    ];
-    
-    logError("Weather data generated for: " . $capital);
-    echo json_encode($result);
+    logError("Weather data prepared for: " . $capital);
+    echo json_encode($weatherData);
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
     
-    // Fallback data
-    $fallbackData = [
-        'AL' => ['temperature' => '19°C', 'condition' => 'Clear', 'humidity' => '68%'],
-    ];
-    
-    $countryCode = isset($countryCode) ? $countryCode : 'UNKNOWN';
-    
-    if (isset($fallbackData[$countryCode])) {
-        echo json_encode($fallbackData[$countryCode]);
-    } else {
-        echo json_encode([
-            'temperature' => '20°C',
-            'condition' => 'Weather API unavailable',
-            'humidity' => '60%'
+    // NO FALLBACK DATA - return error response
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'Weather API unavailable',
+        'message' => $e->getMessage(),
+        'temperature' => 'N/A',
+        'condition' => 'Weather data unavailable',
+        'humidity' => 'N/A'
+    ]);
+}
+
+function fetchRealWeatherData($city, $countryCode, $apiKey) {
+    try {
+        // OpenWeatherMap Current Weather API
+        $weatherApiUrl = "https://api.openweathermap.org/data/2.5/weather?" . http_build_query([
+            'q' => $city . ',' . $countryCode,
+            'appid' => $apiKey,
+            'units' => 'metric' // Get temp in Celsius
         ]);
-    }
-}
-
-function generateTemperature($lat, $lng) {
-    // Generate realistic temperature based on latitude
-    $absLat = abs($lat);
-    
-    if ($absLat > 60) {
-        // Arctic/Antarctic
-        return rand(-10, 5);
-    } elseif ($absLat > 45) {
-        // Temperate cold
-        return rand(5, 20);
-    } elseif ($absLat > 23.5) {
-        // Temperate
-        return rand(10, 25);
-    } else {
-        // Tropical
-        return rand(20, 35);
-    }
-}
-
-function generateCondition($lat, $lng) {
-    $conditions = ['Sunny', 'Cloudy', 'Partly Cloudy', 'Clear', 'Overcast'];
-    
-    // Add climate-specific conditions
-    $absLat = abs($lat);
-    
-    if ($absLat > 60) {
-        $conditions = array_merge($conditions, ['Snowy', 'Cold', 'Blizzard']);
-    } elseif ($absLat < 23.5) {
-        $conditions = array_merge($conditions, ['Hot', 'Humid', 'Tropical']);
-    }
-    
-    // Use consistent randomization based on coordinates
-    $seed = abs(crc32($lat . $lng));
-    $index = $seed % count($conditions);
-    
-    return $conditions[$index];
-}
-
-function generateHumidity($lat, $lng) {
-    $absLat = abs($lat);
-    
-    if ($absLat > 60) {
-        // Arctic - lower humidity
-        return rand(40, 70);
-    } elseif ($absLat < 23.5) {
-        // Tropical - higher humidity
-        return rand(70, 95);
-    } else {
-        // Temperate - moderate humidity
-        return rand(50, 80);
+        
+        logError("Calling OpenWeatherMap API: " . $weatherApiUrl);
+        
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 15,
+                'user_agent' => 'Gazetteer/1.0'
+            ]
+        ]);
+        
+        $response = file_get_contents($weatherApiUrl, false, $context);
+        
+        if ($response === false) {
+            throw new Exception('Failed to fetch weather data from OpenWeatherMap API');
+        }
+        
+        $weatherData = json_decode($response, true);
+        
+        if (!$weatherData) {
+            throw new Exception('Invalid response from weather API');
+        }
+        
+        // Check for API errors
+        if (isset($weatherData['cod']) && $weatherData['cod'] !== 200) {
+            $errorMessage = isset($weatherData['message']) ? $weatherData['message'] : 'Unknown weather API error';
+            throw new Exception('Weather API error: ' . $errorMessage);
+        }
+        
+        // Extract weather information
+        $temperature = round($weatherData['main']['temp'] ?? 0);
+        $condition = $weatherData['weather'][0]['description'] ?? 'Unknown';
+        $humidity = $weatherData['main']['humidity'] ?? 0;
+        
+        // Capitalize condition for better display
+        $condition = ucwords($condition);
+        
+        $result = [
+            'temperature' => $temperature . '°C',
+            'condition' => $condition,
+            'humidity' => $humidity . '%',
+            'city' => $city,
+            'pressure' => isset($weatherData['main']['pressure']) ? $weatherData['main']['pressure'] . ' hPa' : 'N/A',
+            'wind_speed' => isset($weatherData['wind']['speed']) ? round($weatherData['wind']['speed']) . ' m/s' : 'N/A',
+            'feels_like' => isset($weatherData['main']['feels_like']) ? round($weatherData['main']['feels_like']) . '°C' : 'N/A'
+        ];
+        
+        logError("Successfully processed weather data - Temp: " . $result['temperature'] . ", Condition: " . $result['condition']);
+        return $result;
+        
+    } catch (Exception $e) {
+        logError("Weather API error: " . $e->getMessage());
+        
+        throw $e;
     }
 }
 ?>

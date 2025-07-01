@@ -17,7 +17,7 @@ try {
     // GeoNames API configuration
     $geonamesUsername = 'thisismypassword'; // Your actual GeoNames username
     
-    // Fetch real railway stations from GeoNames API
+    // Fetch railway stations from GeoNames API
     $railways = fetchGeoNamesRailways($countryCode, $geonamesUsername);
     
     logError("Railway data prepared for: " . $countryCode . " (" . count($railways) . " stations)");
@@ -25,7 +25,6 @@ try {
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
-    // Minimal fallback only if API completely fails
     echo json_encode([]);
 }
 
@@ -92,17 +91,16 @@ function fetchGeoNamesRailways($countryCode, $username) {
         
     } catch (Exception $e) {
         logError("GeoNames API error: " . $e->getMessage());
-        // Try fallback search
         return fetchAlternativeRailways($countryCode, $username);
     }
 }
 
 function fetchAlternativeRailways($countryCode, $username) {
     try {
-        // Try searching for major cities with railway connections
+        // Searching for major cities with railway connections
         $apiUrl = "http://api.geonames.org/searchJSON?" . http_build_query([
             'country' => $countryCode,
-            'featureClass' => 'P', // Populated places
+            'featureClass' => 'P',
             'orderby' => 'population',
             'maxRows' => 8,
             'username' => $username
@@ -148,7 +146,7 @@ function fetchAlternativeRailways($countryCode, $username) {
 }
 
 function generateFallbackRailways($countryCode) {
-    // Generate some realistic railway data based on country
+    // Fallback Data
     $railways = [];
     
     $railwayData = [

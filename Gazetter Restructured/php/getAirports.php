@@ -25,7 +25,6 @@ try {
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
-    // Minimal fallback only if API completely fails
     echo json_encode([]);
 }
 
@@ -75,7 +74,7 @@ function fetchGeoNamesAirports($countryCode, $username) {
         logError("GeoNames returned " . count($data['geonames']) . " airports");
         
         foreach ($data['geonames'] as $airport) {
-            // Extract IATA code from name if available (usually in parentheses)
+            // Extract IATA code from name if available
             $name = $airport['name'] ?? $airport['toponymName'] ?? 'Unknown Airport';
             $code = extractAirportCode($name, $airport);
             
@@ -128,7 +127,7 @@ function extractAirportCode($name, $airport) {
         return strtoupper(substr($words[0], 0, 3));
     }
     
-    // Last resort: use first 3 letters of name
+    // Last ditch effort: use first 3 letters of name
     return strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $name), 0, 3));
 }
 ?>

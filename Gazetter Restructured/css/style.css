@@ -5,7 +5,7 @@
 .leaflet-grab { cursor: grab !important; }
 .leaflet-interactive { cursor: pointer !important; }
 
-/* Country Selector - Individual floating element */
+/* Country Selector */
 #selectContainer {
   top: 15px;
   left: 100px;
@@ -18,7 +18,7 @@
   backdrop-filter: blur(10px);
 }
 
-/* Search Container - Individual floating element */
+/* Search Container */
 #searchContainer {
   top: 15px;
   right: 150px;
@@ -70,7 +70,7 @@
   text-align: center;
 }
 
-/* Country Geomarkers - Map Pin Shape */
+/* Country Geomarkers */
 .country-marker {
   background: transparent !important;
   border: none !important;

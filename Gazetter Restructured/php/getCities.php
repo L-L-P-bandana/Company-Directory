@@ -17,7 +17,7 @@ try {
     // GeoNames API configuration
     $geonamesUsername = 'thisismypassword'; // Your actual GeoNames username
     
-    // Fetch real cities from GeoNames API
+    // Fetch cities from GeoNames API
     $cities = fetchGeoNamesCities($countryCode, $geonamesUsername);
     
     logError("Cities data prepared for: " . $countryCode . " (" . count($cities) . " cities)");
@@ -25,7 +25,6 @@ try {
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
-    // Minimal fallback only if API completely fails
     echo json_encode([]);
 }
 
@@ -33,12 +32,12 @@ function fetchGeoNamesCities($countryCode, $username) {
     $cities = [];
     
     try {
-        // GeoNames API URL for cities (populated places)
+        // GeoNames API URL for populated cities
         $apiUrl = "http://api.geonames.org/searchJSON?" . http_build_query([
             'country' => $countryCode,
             'featureClass' => 'P', // Populated places
             'orderby' => 'population',
-            'maxRows' => 20, // Get up to 20 cities
+            'maxRows' => 20, // Get up to 20 cities (avoid clutter)
             'username' => $username
         ]);
         
@@ -86,13 +85,12 @@ function fetchGeoNamesCities($countryCode, $username) {
             ];
         }
         
-        // Already sorted by population from API (orderby=population)
         logError("Processed " . count($cities) . " cities successfully");
         return $cities;
         
     } catch (Exception $e) {
         logError("GeoNames API error: " . $e->getMessage());
-        // Return empty array if API fails completely
+        // Return empty if API botches it
         return [];
     }
 }
