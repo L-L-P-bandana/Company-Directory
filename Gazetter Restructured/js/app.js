@@ -647,7 +647,7 @@ function displaySearchResults() {
 }
 
 /**
- * Keyboard navigation on search reults
+ * Keyboard navigation on search reults (accessibility feature to scroll using keyboard)
  */
 function navigateSearchResults(direction) {
   const maxIndex = Math.min(searchResults.length - 1, 7);
@@ -1237,7 +1237,7 @@ function isPointInCountry(latlng, geometry) {
 }
 
 /**
- * Point-in-polygon algorithm
+ * Point-in-polygon algorithm (This is for click detection, I looked up ray casting algorithm and translated it to js)
  */
 function isPointInPolygon(latlng, polygonCoords) {
   var coords = polygonCoords[0];
@@ -1254,7 +1254,7 @@ function isPointInPolygon(latlng, polygonCoords) {
 }
 
 /**
- * Calculate bounding box area for geometry
+ * Calculate bounding box for geometry (searched up how to calculate a bounding box and plugged in my own usecase and coordinates)
  */
 function getBoundingBoxArea(geometry) {
   var bounds = {minLat: 90, maxLat: -90, minLng: 180, maxLng: -180};

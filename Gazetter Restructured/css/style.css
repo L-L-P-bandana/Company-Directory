@@ -1,4 +1,4 @@
-/* Essential Map Cursor Styles */
+/* Map Cursor Styles */
 #map { cursor: crosshair; }
 .leaflet-container { cursor: crosshair !important; }
 .leaflet-dragging { cursor: grabbing !important; }
@@ -10,7 +10,7 @@
 #searchContainer { top: 15px; right: 150px; width: 250px; z-index: 1011; }
 .search-icon { right: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
 
-/* Custom Leaflet Markers */
+/* Leaflet Markers standardisation */
 .country-marker { background: transparent !important; border: none !important; cursor: pointer !important; z-index: 1000; }
 .marker-inner { width: 48px; height: 48px; position: relative; cursor: pointer; transition: all 0.3s ease; }
 .marker-inner::before {
@@ -43,7 +43,7 @@
 .port-marker-inner { background: linear-gradient(135deg, #20c997, #17a085); border-radius: 4px; }
 .poi-marker-inner:hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
 
-/* Leaflet Control Z-Index Fix */
+/* Leaflet Control Z-Index to prevent unwanted overlapping of elements shoud the user zoom themselves into such focus */
 .leaflet-control-container .leaflet-control-layers,
 .leaflet-control-container .leaflet-control-layers.leaflet-control-layers-expanded { z-index: 1050 !important; }
 

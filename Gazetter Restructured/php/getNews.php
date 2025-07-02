@@ -67,7 +67,7 @@ try {
     ]);
 }
 
-function fetchRealNews($countryCode, $countryName, $apiKey) {
+function fetchRealNews($countryCode, $countryName, $apiKey) { // Many countries were being stubborn
     try {
         // Strat 1: Try country-specific top headlines first
         $articles = tryTopHeadlines($countryCode, $apiKey);
@@ -240,7 +240,7 @@ function getBroadSearchTerms($countryName) {
     return $terms;
 }
 
-function formatPublishDate($dateString) {
+function formatPublishDate($dateString) { // adding date/time to the posts
     try {
         $date = new DateTime($dateString);
         $now = new DateTime();
