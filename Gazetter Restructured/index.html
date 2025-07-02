@@ -18,7 +18,7 @@
 <body>
     <!-- Country Selector -->
     <div id="selectContainer" class="position-fixed">
-        <select id="countrySelect" class="form-select shadow-sm">
+        <select id="countrySelect" class="form-select shadow-sm bg-white bg-opacity-75">
             <option value="">Select a country...</option>
         </select>
     </div>
@@ -26,9 +26,9 @@
     <!-- Search Container -->
     <div id="searchContainer" class="position-fixed">
         <div class="position-relative">
-            <input type="text" id="countrySearch" class="form-control pe-5 shadow-sm" placeholder="Search countries..." autocomplete="off">
+            <input type="text" id="countrySearch" class="form-control pe-5 shadow-sm bg-white bg-opacity-75" placeholder="Search countries..." autocomplete="off">
             <i class="fa-solid fa-search position-absolute text-muted search-icon"></i>
-            <div id="searchResults" class="search-results position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow"></div>
+            <div id="searchResults" class="d-none position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-lg list-group list-group-flush" style="max-height: 300px; overflow-y: auto; z-index: 1012;"></div>
         </div>
     </div>
 

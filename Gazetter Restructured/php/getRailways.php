@@ -15,7 +15,7 @@ try {
     logError("Fetching railways for country: " . $countryCode);
     
     // GeoNames API configuration
-    $geonamesUsername = 'thisismypassword'; // Your actual GeoNames username
+    $geonamesUsername = 'thisismypassword';
     
     // Fetch railway stations from GeoNames API
     $railways = fetchGeoNamesRailways($countryCode, $geonamesUsername);

@@ -1,11 +1,24 @@
+// ===================================================================
+// GAZETTEER APPLICATION - JS
+// ===================================================================
+
+// Global Variables & State Management
 var map, currentCountryCode = '', countryBorder = null, allCountryBorders = null, allCountries = [];
 var searchResults = [], selectedSearchIndex = -1, visitedCountries = [], maxMarkers = 50;
 var currentCurrencyData = null, globalExchangeRates = null;
 
-// Marker groups
+// ===================================================================
+// LEAFLET MARKER GROUPS & CLUSTERING
+// ===================================================================
+
+// Country markers (visited locations)
 var countryMarkers = L.layerGroup();
+
+// Clustered POI groups with custom styling
 var cityClusterGroup = L.markerClusterGroup({
-  showCoverageOnHover: false, zoomToBoundsOnClick: true, maxClusterRadius: 50,
+  showCoverageOnHover: false, 
+  zoomToBoundsOnClick: true, 
+  maxClusterRadius: 50,
   iconCreateFunction: function(cluster) {
     var count = cluster.getChildCount();
     var size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
@@ -16,8 +29,11 @@ var cityClusterGroup = L.markerClusterGroup({
     });
   }
 });
+
 var airportClusterGroup = L.markerClusterGroup({
-  showCoverageOnHover: false, zoomToBoundsOnClick: true, maxClusterRadius: 50,
+  showCoverageOnHover: false, 
+  zoomToBoundsOnClick: true, 
+  maxClusterRadius: 50,
   iconCreateFunction: function(cluster) {
     var count = cluster.getChildCount();
     var size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
@@ -28,8 +44,11 @@ var airportClusterGroup = L.markerClusterGroup({
     });
   }
 });
+
 var railwayClusterGroup = L.markerClusterGroup({
-  showCoverageOnHover: false, zoomToBoundsOnClick: true, maxClusterRadius: 50,
+  showCoverageOnHover: false, 
+  zoomToBoundsOnClick: true, 
+  maxClusterRadius: 50,
   iconCreateFunction: function(cluster) {
     var count = cluster.getChildCount();
     var size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
@@ -40,8 +59,11 @@ var railwayClusterGroup = L.markerClusterGroup({
     });
   }
 });
+
 var portClusterGroup = L.markerClusterGroup({
-  showCoverageOnHover: false, zoomToBoundsOnClick: true, maxClusterRadius: 50,
+  showCoverageOnHover: false, 
+  zoomToBoundsOnClick: true, 
+  maxClusterRadius: 50,
   iconCreateFunction: function(cluster) {
     var count = cluster.getChildCount();
     var size = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
@@ -53,18 +75,59 @@ var portClusterGroup = L.markerClusterGroup({
   }
 });
 
-// Tile layers
-var streets = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {attribution: "Tiles &copy; Esri"});
-var satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {attribution: "Tiles &copy; Esri"});
+// ===================================================================
+// MAP TILE LAYERS
+// ===================================================================
 
-// Easy buttons
-var demographicsBtn = L.easyButton("fa-users fa-xl", function() { loadCountryData(); $("#demographicsModal").modal("show"); });
-var weatherBtn = L.easyButton("fa-cloud fa-xl", function() { loadWeatherData(); $("#weatherModal").modal("show"); });
-var currencyBtn = L.easyButton("fa-coins fa-xl", function() { loadCurrencyData(); $("#currencyModal").modal("show"); });
-var newsBtn = L.easyButton("fa-newspaper fa-xl", function() { loadNewsData(); $("#newsModal").modal("show"); });
-var wikipediaBtn = L.easyButton("fa-wikipedia-w fa-xl", function() { loadWikipediaData(); $("#wikipediaModal").modal("show"); });
-var holidaysBtn = L.easyButton("fa-calendar fa-xl", function() { loadHolidaysData(); $("#holidaysModal").modal("show"); });
+var streets = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+  attribution: "Tiles &copy; Esri"
+});
 
+var satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  attribution: "Tiles &copy; Esri"
+});
+
+// ===================================================================
+// LEAFLET EASY BUTTONS (Modal Triggers)
+// ===================================================================
+
+var demographicsBtn = L.easyButton("fa-users fa-xl", function() { 
+  loadCountryData(); 
+  $("#demographicsModal").modal("show"); 
+});
+
+var weatherBtn = L.easyButton("fa-cloud fa-xl", function() { 
+  loadWeatherData(); 
+  $("#weatherModal").modal("show"); 
+});
+
+var currencyBtn = L.easyButton("fa-coins fa-xl", function() { 
+  loadCurrencyData(); 
+  $("#currencyModal").modal("show"); 
+});
+
+var newsBtn = L.easyButton("fa-newspaper fa-xl", function() { 
+  loadNewsData(); 
+  $("#newsModal").modal("show"); 
+});
+
+var wikipediaBtn = L.easyButton("fa-wikipedia-w fa-xl", function() { 
+  loadWikipediaData(); 
+  $("#wikipediaModal").modal("show"); 
+});
+
+var holidaysBtn = L.easyButton("fa-calendar fa-xl", function() { 
+  loadHolidaysData(); 
+  $("#holidaysModal").modal("show"); 
+});
+
+// ===================================================================
+// UTILITY FUNCTIONS
+// ===================================================================
+
+/**
+ * Debounce function to curb API calls during search
+ */
 function debounce(func, wait) {
   let timeout;
   return function(...args) {
@@ -73,16 +136,27 @@ function debounce(func, wait) {
   };
 }
 
+// ===================================================================
+// APP INITIALIZATION
+// ===================================================================
+
 $(document).ready(function() {
-  // Initialize map
+  
+  // Initialize Leaflet map
   map = L.map("map", {layers: [streets]}).setView([54.5, -4], 6);
+  
+  // Add clustered layers to map
   map.addLayer(cityClusterGroup);
   map.addLayer(airportClusterGroup);
   map.addLayer(railwayClusterGroup);
   map.addLayer(portClusterGroup);
   
+  // Layer control setup
   L.control.layers(
-    {"Streets": streets, "Satellite": satellite}, 
+    {
+      "Streets": streets, 
+      "Satellite": satellite
+    }, 
     {
       "Visited Countries": countryMarkers, 
       "Cities": cityClusterGroup, 
@@ -92,18 +166,23 @@ $(document).ready(function() {
     }
   ).addTo(map);
   
+  // Add country markers layer
   countryMarkers.addTo(map);
-  [demographicsBtn, weatherBtn, currencyBtn, newsBtn, wikipediaBtn, holidaysBtn].forEach(btn => btn.addTo(map));
   
+  // Add easy buttons to map
+  [demographicsBtn, weatherBtn, currencyBtn, newsBtn, wikipediaBtn, holidaysBtn]
+    .forEach(btn => btn.addTo(map));
+  
+  // Load initial data
   loadCountries();
   loadAllCountryBorders();
   setupSearchHandlers();
   setupCurrencyConverter();
   
-  // Auto-detect user location and highlight their country on page spawn
+  // Auto-detect user location and highlight their country
   detectUserLocation();
   
-  // Event handlers
+  // Event listeners
   $('#countrySelect').change(function() {
     var code = $(this).val();
     if (code) selectCountry(code);
@@ -115,17 +194,32 @@ $(document).ready(function() {
   });
   
   $(document).click(function(e) {
-    if (!$(e.target).closest('#searchContainer').length) hideSearchResults();
+    if (!$(e.target).closest('#searchContainer').length) {
+      hideSearchResults();
+    }
   });
 });
 
-// Currency Converter Rigging
+// ===================================================================
+// CURRENCY CONVERTER SYSTEM
+// ===================================================================
+
+/**
+ * Initialize global currency converter functionality
+ */
 function setupCurrencyConverter() {
   loadGlobalExchangeRates();
-  $('#convertBtn, #convertAmount, #fromCurrency, #toCurrency').on('click change input', performConversion);
+  
+  // Event bindings for real-time conversion
+  $('#convertBtn, #convertAmount, #fromCurrency, #toCurrency')
+    .on('click change input', performConversion);
+  
   $('#fromCurrency').on('change', updateAmountSymbol);
 }
 
+/**
+ * Load global exchange rates for currency converter
+ */
 function loadGlobalExchangeRates() {
   $.ajax({
     url: 'php/getCurrency.php',
@@ -148,8 +242,10 @@ function loadGlobalExchangeRates() {
   });
 }
 
+/**
+ * Populate currency dropdown selectors
+ */
 function populateCurrencySelectors(currencies) {
-  // Populate currency dropdowns with all currencies
   var fromOptions = '<option value="">Select currency...</option>';
   var toOptions = '<option value="">Select currency...</option>';
   
@@ -165,13 +261,16 @@ function populateCurrencySelectors(currencies) {
   // Set default TO currency to USD
   $('#toCurrency').val('USD');
   
-  // If we have a current country selected, set FROM to that country's currency
+  // If current country selected, set FROM to that country's currency
   if (currentCountryCode && currentCurrencyData) {
     $('#fromCurrency').val(currentCurrencyData.code);
     updateAmountSymbol();
   }
 }
 
+/**
+ * Update amount field label with currency symbol
+ */
 function updateAmountSymbol() {
   var fromCode = $('#fromCurrency').val();
   if (fromCode && globalExchangeRates && globalExchangeRates.currencies) {
@@ -184,6 +283,9 @@ function updateAmountSymbol() {
   }
 }
 
+/**
+ * Perform live currency conversion
+ */
 function performConversion() {
   var amount = parseFloat($('#convertAmount').val()) || 0;
   var fromCode = $('#fromCurrency').val();
@@ -197,7 +299,7 @@ function performConversion() {
   var fromRate = globalExchangeRates.rates[fromCode] || 1;
   var toRate = globalExchangeRates.rates[toCode] || 1;
   
-  // Conversion
+  // Convert via USD as base currency
   var usdAmount = fromCode === 'USD' ? amount : amount / fromRate;
   var result = toCode === 'USD' ? usdAmount : usdAmount * toRate;
   
@@ -207,34 +309,65 @@ function performConversion() {
   $('#convertResult').html(`${toSymbol}${result.toFixed(2)}`);
 }
 
-// Marker management
+// ===================================================================
+// MARKER MANAGEMENT SYSTEM
+// ===================================================================
+
+/**
+ * Add country marker for visited locations
+ */
 function addCountryMarker(code, name, latlng) {
+  // Remove existing marker for this country
   var existing = visitedCountries.findIndex(c => c.code === code);
   if (existing !== -1) {
     countryMarkers.removeLayer(visitedCountries[existing].marker);
     visitedCountries.splice(existing, 1);
   }
   
+  // Maintain maximum marker limit
   if (visitedCountries.length >= maxMarkers) {
     var oldest = visitedCountries.shift();
     countryMarkers.removeLayer(oldest.marker);
   }
   
+  // Create new marker with custom icon
   var marker = L.marker(latlng, { 
     icon: L.divIcon({
       className: 'country-marker',
       html: '<div class="marker-inner new-marker" data-country-code="' + code + '"></div>',
-      iconSize: [48, 48], iconAnchor: [24, 42], popupAnchor: [0, -42]
+      iconSize: [48, 48], 
+      iconAnchor: [24, 42], 
+      popupAnchor: [0, -42]
     }),
-    title: name, zIndexOffset: 1000
+    title: name, 
+    zIndexOffset: 1000
   });
   
-  marker.bindTooltip(name, {permanent: false, direction: 'top', offset: [0, -45], className: 'country-tooltip'});
-  marker.on('click', () => { $('#countrySelect').val(code); selectCountry(code); });
+  // Bind tooltip and click handler
+  marker.bindTooltip(name, {
+    permanent: false, 
+    direction: 'top', 
+    offset: [0, -45], 
+    className: 'country-tooltip'
+  });
+  
+  marker.on('click', () => { 
+    $('#countrySelect').val(code); 
+    selectCountry(code); 
+  });
+  
   marker.addTo(countryMarkers);
   
-  visitedCountries.push({code, name, latlng, marker, timestamp: Date.now()});
+  // Track visited country
+  visitedCountries.push({
+    code, 
+    name, 
+    latlng, 
+    marker, 
+    timestamp: Date.now()
+  });
   
+  // Remove pulse animation after 2 seconds
   setTimeout(() => {
     var el = marker.getElement();
     if (el) {
@@ -244,75 +377,172 @@ function addCountryMarker(code, name, latlng) {
   }, 2000);
 }
 
-// Data loading
+// ===================================================================
+// POI DATA LOADING & MARKER CREATION (the little icons)
+// ===================================================================
+
+/**
+ * Load cities and POI data for selected country
+ */
 function loadCitiesAndAirports(countryCode) {
   if (!countryCode) return;
   
+  // Load cities
   $.ajax({
-    url: 'php/getCities.php', data: {country: countryCode}, dataType: 'json',
-    success: function(cities) { if (cities?.length) addCityMarkers(cities); }
+    url: 'php/getCities.php', 
+    data: {country: countryCode}, 
+    dataType: 'json',
+    success: function(cities) { 
+      if (cities?.length) addCityMarkers(cities); 
+    }
   });
   
+  // Load airports
   $.ajax({
-    url: 'php/getAirports.php', data: {country: countryCode}, dataType: 'json',
-    success: function(airports) { if (airports?.length) addAirportMarkers(airports); }
+    url: 'php/getAirports.php', 
+    data: {country: countryCode}, 
+    dataType: 'json',
+    success: function(airports) { 
+      if (airports?.length) addAirportMarkers(airports); 
+    }
   });
   
+  // Load railways
   $.ajax({
-    url: 'php/getRailways.php', data: {country: countryCode}, dataType: 'json',
-    success: function(railways) { if (railways?.length) addRailwayMarkers(railways); }
+    url: 'php/getRailways.php', 
+    data: {country: countryCode}, 
+    dataType: 'json',
+    success: function(railways) { 
+      if (railways?.length) addRailwayMarkers(railways); 
+    }
   });
   
+  // Load ports
   $.ajax({
-    url: 'php/getPorts.php', data: {country: countryCode}, dataType: 'json',
-    success: function(ports) { if (ports?.length) addPortMarkers(ports); }
+    url: 'php/getPorts.php', 
+    data: {country: countryCode}, 
+    dataType: 'json',
+    success: function(ports) { 
+      if (ports?.length) addPortMarkers(ports); 
+    }
   });
 }
 
+/**
+ * Add city markers to cluster group
+ */
 function addCityMarkers(cities) {
   cities.forEach(city => {
     var marker = L.marker([city.lat, city.lng], { 
-      icon: L.divIcon({className: 'city-marker', html: '<div class="city-marker-inner">🏙️</div>', iconSize: [22, 22], iconAnchor: [11, 11]})
+      icon: L.divIcon({
+        className: 'city-marker', 
+        html: '<div class="poi-marker-inner city-marker-inner">🏙️</div>', 
+        iconSize: [22, 22], 
+        iconAnchor: [11, 11]
+      })
     });
-    var tooltip = city.name + (city.population ? ' (Pop: ' + city.population.toLocaleString() + ')' : '') + (city.admin1 ? ' - ' + city.admin1 : '');
-    marker.bindTooltip(tooltip, {permanent: false, direction: 'top', className: 'city-tooltip'});
+    
+    var tooltip = city.name + 
+      (city.population ? ' (Pop: ' + city.population.toLocaleString() + ')' : '') + 
+      (city.admin1 ? ' - ' + city.admin1 : '');
+    
+    marker.bindTooltip(tooltip, {
+      permanent: false, 
+      direction: 'top', 
+      className: 'city-tooltip'
+    });
+    
     cityClusterGroup.addLayer(marker);
   });
 }
 
+/**
+ * Add airport markers to cluster group
+ */
 function addAirportMarkers(airports) {
   airports.forEach(airport => {
     var marker = L.marker([airport.lat, airport.lng], { 
-      icon: L.divIcon({className: 'airport-marker', html: '<div class="airport-marker-inner">✈️</div>', iconSize: [22, 22], iconAnchor: [11, 11]})
+      icon: L.divIcon({
+        className: 'airport-marker', 
+        html: '<div class="poi-marker-inner airport-marker-inner">✈️</div>', 
+        iconSize: [22, 22], 
+        iconAnchor: [11, 11]
+      })
     });
-    var tooltip = airport.name + (airport.code ? ' (' + airport.code + ')' : '') + (airport.admin1 ? ' - ' + airport.admin1 : '');
-    marker.bindTooltip(tooltip, {permanent: false, direction: 'top', className: 'airport-tooltip'});
+    
+    var tooltip = airport.name + 
+      (airport.code ? ' (' + airport.code + ')' : '') + 
+      (airport.admin1 ? ' - ' + airport.admin1 : '');
+    
+    marker.bindTooltip(tooltip, {
+      permanent: false, 
+      direction: 'top', 
+      className: 'airport-tooltip'
+    });
+    
     airportClusterGroup.addLayer(marker);
   });
 }
 
+/**
+ * Add railway markers to cluster group
+ */
 function addRailwayMarkers(railways) {
   railways.forEach(railway => {
     var marker = L.marker([railway.lat, railway.lng], { 
-      icon: L.divIcon({className: 'railway-marker', html: '<div class="railway-marker-inner">🚂</div>', iconSize: [22, 22], iconAnchor: [11, 11]})
+      icon: L.divIcon({
+        className: 'railway-marker', 
+        html: '<div class="poi-marker-inner railway-marker-inner">🚂</div>', 
+        iconSize: [22, 22], 
+        iconAnchor: [11, 11]
+      })
     });
-    var tooltip = railway.name + (railway.type ? ' (' + railway.type + ')' : '') + (railway.admin1 ? ' - ' + railway.admin1 : '');
-    marker.bindTooltip(tooltip, {permanent: false, direction: 'top', className: 'railway-tooltip'});
+    
+    var tooltip = railway.name + 
+      (railway.type ? ' (' + railway.type + ')' : '') + 
+      (railway.admin1 ? ' - ' + railway.admin1 : '');
+    
+    marker.bindTooltip(tooltip, {
+      permanent: false, 
+      direction: 'top', 
+      className: 'railway-tooltip'
+    });
+    
     railwayClusterGroup.addLayer(marker);
   });
 }
 
+/**
+ * Add port markers to cluster group
+ */
 function addPortMarkers(ports) {
   ports.forEach(port => {
     var marker = L.marker([port.lat, port.lng], { 
-      icon: L.divIcon({className: 'port-marker', html: '<div class="port-marker-inner">⚓</div>', iconSize: [22, 22], iconAnchor: [11, 11]})
+      icon: L.divIcon({
+        className: 'port-marker', 
+        html: '<div class="poi-marker-inner port-marker-inner">⚓</div>', 
+        iconSize: [22, 22], 
+        iconAnchor: [11, 11]
+      })
     });
-    var tooltip = port.name + (port.type ? ' (' + port.type + ')' : '') + (port.admin1 ? ' - ' + port.admin1 : '');
-    marker.bindTooltip(tooltip, {permanent: false, direction: 'top', className: 'port-tooltip'});
+    
+    var tooltip = port.name + 
+      (port.type ? ' (' + port.type + ')' : '') + 
+      (port.admin1 ? ' - ' + port.admin1 : '');
+    
+    marker.bindTooltip(tooltip, {
+      permanent: false, 
+      direction: 'top', 
+      className: 'port-tooltip'
+    });
+    
     portClusterGroup.addLayer(marker);
   });
 }
 
+/**
+ * Clear all POI markers for country switch
+ */
 function clearClustersForCountry() {
   cityClusterGroup.clearLayers();
   airportClusterGroup.clearLayers();
@@ -320,7 +550,13 @@ function clearClustersForCountry() {
   portClusterGroup.clearLayers();
 }
 
-// Search func
+// ===================================================================
+// SEARCH FUNCTIONALITY
+// ===================================================================
+
+/**
+ * Setup search input handlers with keyboard navigation
+ */
 function setupSearchHandlers() {
   const searchInput = $('#countrySearch');
   const debouncedSearch = debounce(performSearch, 300);
@@ -334,67 +570,107 @@ function setupSearchHandlers() {
     if (!$('#searchResults').is(':visible')) return;
     
     switch(e.keyCode) {
-      case 38: e.preventDefault(); navigateSearchResults(-1); break;
-      case 40: e.preventDefault(); navigateSearchResults(1); break;
-      case 13: e.preventDefault(); selectHighlightedResult(); break;
-      case 27: hideSearchResults(); break;
+      case 38: // Up arrow
+        e.preventDefault(); 
+        navigateSearchResults(-1); 
+        break;
+      case 40: // Down arrow
+        e.preventDefault(); 
+        navigateSearchResults(1); 
+        break;
+      case 13: // Enter
+        e.preventDefault(); 
+        selectHighlightedResult(); 
+        break;
+      case 27: // Escape
+        hideSearchResults(); 
+        break;
     }
   });
 
   searchInput.on('focus', function() {
     const query = $(this).val().trim();
-    if (query.length > 0 && searchResults.length > 0) showSearchResults();
+    if (query.length > 0 && searchResults.length > 0) {
+      showSearchResults();
+    }
   });
 }
 
+/**
+ * Search through countries
+ */
 function performSearch(query) {
   if (!allCountries?.length) return;
   
   const lowerQuery = query.toLowerCase();
   searchResults = allCountries.filter(country => 
-    country.name.toLowerCase().includes(lowerQuery) || country.code.toLowerCase().includes(lowerQuery)
+    country.name.toLowerCase().includes(lowerQuery) || 
+    country.code.toLowerCase().includes(lowerQuery)
   );
+  
   displaySearchResults();
 }
 
+/**
+ * Display search results
+ */
 function displaySearchResults() {
   const container = $('#searchResults');
   selectedSearchIndex = -1;
   
   if (searchResults.length === 0) {
-    container.html('<div class="p-3 text-center text-muted fst-italic">No countries found</div>');
+    container.html('<div class="list-group-item text-center text-muted fst-italic">No countries found</div>');
   } else {
     let html = '';
     searchResults.slice(0, 8).forEach((country, index) => {
-      html += `<div class="search-result-item" data-index="${index}" data-code="${country.code}">
-        <span class="search-result-code">${country.code}</span>
-        <span class="search-result-name">${country.name}</span></div>`;
+      html += `<div class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2 search-result-item" 
+                    data-index="${index}" data-code="${country.code}">
+        <span class="badge bg-secondary">${country.code}</span>
+        <span class="search-result-name">${country.name}</span>
+      </div>`;
     });
+    
     if (searchResults.length > 8) {
-      html += `<div class="p-3 text-center text-muted fst-italic">${searchResults.length - 8} more countries...</div>`;
+      html += `<div class="list-group-item text-center text-muted fst-italic small">
+                 ${searchResults.length - 8} more countries...
+               </div>`;
     }
+    
     container.html(html);
-    $('.search-result-item').click(function() { selectCountryFromSearch($(this).data('code')); });
+    
+    $('.search-result-item').click(function() { 
+      selectCountryFromSearch($(this).data('code')); 
+    });
   }
+  
   showSearchResults();
 }
 
+/**
+ * Keyboard navigation on search reults
+ */
 function navigateSearchResults(direction) {
   const maxIndex = Math.min(searchResults.length - 1, 7);
   selectedSearchIndex = direction === 1 
     ? (selectedSearchIndex < maxIndex ? selectedSearchIndex + 1 : 0)
     : (selectedSearchIndex > 0 ? selectedSearchIndex - 1 : maxIndex);
   
-  $('.search-result-item').removeClass('highlighted');
-  $(`.search-result-item[data-index="${selectedSearchIndex}"]`).addClass('highlighted');
+  $('.search-result-item').removeClass('active');
+  $(`.search-result-item[data-index="${selectedSearchIndex}"]`).addClass('active');
 }
 
+/**
+ * Select highlighted search result
+ */
 function selectHighlightedResult() {
   if (selectedSearchIndex >= 0 && selectedSearchIndex < searchResults.length) {
     selectCountryFromSearch(searchResults[selectedSearchIndex].code);
   }
 }
 
+/**
+ * Select country from search results
+ */
 function selectCountryFromSearch(countryCode) {
   $('#countrySearch').val('');
   hideSearchResults();
@@ -404,11 +680,26 @@ function selectCountryFromSearch(countryCode) {
   selectCountry(countryCode, center);
 }
 
-function showSearchResults() { $('#searchResults').addClass('show'); }
-function hideSearchResults() { $('#searchResults').removeClass('show'); selectedSearchIndex = -1; }
+/**
+ * Show/hide search results
+ */
+function showSearchResults() { 
+  $('#searchResults').removeClass('d-none'); 
+}
 
+function hideSearchResults() { 
+  $('#searchResults').addClass('d-none'); 
+  selectedSearchIndex = -1; 
+}
+
+// ===================================================================
+// COUNTRY DETECTION & SELECTION
+// ===================================================================
+
+/**
+ * Intense country code detection from GeoJSON properties (necessary as France and Norway where being stubborn)
+ */
 function getCountryCode(feature) {
-  // Try multiple possible ISO code properties in order of preference to ensure capture (this was necessary as norway and france were being stubborn)
   const isoProps = [
     'ISO3166-1-Alpha-2',  // Primary
     'ISO_A2',             // Alternative
@@ -424,10 +715,13 @@ function getCountryCode(feature) {
     }
   }
   
-  // If no valid ISO code found, try to map by name
+  // Fallback to name-based mapping
   return mapCountryNameToIso(feature.properties?.name);
 }
 
+/**
+ * Map country names to ISO codes (for problematic entries)
+ */
 function mapCountryNameToIso(countryName) {
   if (!countryName) return null;
   
@@ -445,18 +739,28 @@ function mapCountryNameToIso(countryName) {
   
   return nameToIso[countryName] || null;
 }
+
+/**
+ * Select and highlight a country
+ */
 function selectCountry(countryCode, markerPosition) {
   currentCountryCode = countryCode;
   loadCountryBorder(countryCode);
   
   var countryName = allCountries.find(c => c.code === countryCode)?.name || countryCode;
   var center = markerPosition || getCountryCenter(countryCode);
-  if (center) addCountryMarker(countryCode, countryName, center);
+  
+  if (center) {
+    addCountryMarker(countryCode, countryName, center);
+  }
   
   clearClustersForCountry();
   loadCitiesAndAirports(countryCode);
 }
 
+/**
+ * Get center coordinates for a country
+ */
 function getCountryCenter(countryCode) {
   if (!allCountryBorders?.features) return null;
   
@@ -473,44 +777,84 @@ function getCountryCenter(countryCode) {
   return null;
 }
 
-// API loading functions
+// ===================================================================
+// DATA LOADING FUNCTIONS
+// ===================================================================
+
+/**
+ * Load countries list for dropdown
+ */
 function loadCountries() {
   $.ajax({
-    url: 'php/getCountries.php', dataType: 'json',
+    url: 'php/getCountries.php', 
+    dataType: 'json',
     success: function(data) {
       allCountries = data;
-      $('#countrySelect').html('<option value="">Select a country...</option>' + 
-        data.map(c => `<option value="${c.code}">${c.name}</option>`).join(''));
+      $('#countrySelect').html(
+        '<option value="">Select a country...</option>' + 
+        data.map(c => `<option value="${c.code}">${c.name}</option>`).join('')
+      );
     }
   });
 }
 
+/**
+ * Load country borders GeoJSON data
+ */
 function loadAllCountryBorders() {
-  $.ajax({url: 'countryBorders.geo.json', dataType: 'json', success: data => allCountryBorders = data});
+  $.ajax({
+    url: 'countryBorders.geo.json', 
+    dataType: 'json', 
+    success: data => allCountryBorders = data
+  });
 }
 
+/**
+ * Load and display country border on map
+ */
 function loadCountryBorder(countryCode) {
-  if (countryBorder) map.removeLayer(countryBorder);
+  if (countryBorder) {
+    map.removeLayer(countryBorder);
+  }
   
   $.ajax({
-    url: 'php/getCountryBorder.php', data: {country: countryCode}, dataType: 'json',
+    url: 'php/getCountryBorder.php', 
+    data: {country: countryCode}, 
+    dataType: 'json',
     success: function(data) {
       if (data?.geometry) {
-        countryBorder = L.geoJSON(data, {style: {color: "#2980b9", weight: 2, fillOpacity: 0.1}}).addTo(map);
+        countryBorder = L.geoJSON(data, {
+          style: {
+            color: "#2980b9", 
+            weight: 2, 
+            fillOpacity: 0.1
+          }
+        }).addTo(map);
+        
         map.fitBounds(countryBorder.getBounds());
       }
     }
   });
 }
 
+// ===================================================================
+// MODAL DATA LOADING FUNCTIONS
+// ===================================================================
+
+/**
+ * Load country demographic data
+ */
 function loadCountryData() {
   if (!currentCountryCode) {
-    $('#population, #area, #capital, #region, #capitalWiki').text('Select a country first');
+    $('#population, #area, #capital, #region, #capitalWiki')
+      .text('Select a country first');
     return;
   }
   
   $.ajax({
-    url: 'php/getCountryInfo.php', data: {country: currentCountryCode}, dataType: 'json',
+    url: 'php/getCountryInfo.php', 
+    data: {country: currentCountryCode}, 
+    dataType: 'json',
     success: function(data) {
       $('#population').text(data.population || 'N/A');
       $('#area').text(data.area || 'N/A');
@@ -518,7 +862,10 @@ function loadCountryData() {
       $('#region').text(data.region || 'N/A');
       
       if (data.capital && data.capital !== 'N/A') {
-        $('#capitalWiki').html(`<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(data.capital)}" target="_blank" class="text-decoration-none">Wikipedia ↗</a>`);
+        $('#capitalWiki').html(
+          `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(data.capital)}" 
+             target="_blank" class="text-decoration-none">Wikipedia ↗</a>`
+        );
       } else {
         $('#capitalWiki').text('N/A');
       }
@@ -526,27 +873,33 @@ function loadCountryData() {
   });
 }
 
+/**
+ * Load currency data and update converter
+ */
 function loadCurrencyData() {
   if (!currentCountryCode) {
-    $('#currencyName, #currencyCode, #exchangeRate').text('Select a country first');
+    $('#currencyName, #currencyCode, #exchangeRate')
+      .text('Select a country first');
     return;
   }
   
   $.ajax({
-    url: 'php/getCurrency.php', data: {country: currentCountryCode}, dataType: 'json',
+    url: 'php/getCurrency.php', 
+    data: {country: currentCountryCode}, 
+    dataType: 'json',
     success: function(data) {
       currentCurrencyData = data;
       $('#currencyName').text(data.name || 'N/A');
       $('#currencyCode').text(data.code || 'N/A');
       $('#exchangeRate').text(data.rate || 'N/A');
       
-      // Set the FROM currency to the country's currency (but don't replace all options)
+      // Update converter with country currency
       if (globalExchangeRates && globalExchangeRates.currencies) {
         $('#fromCurrency').val(data.code);
-        updateAmountSymbol(); // Update the amount field symbol
+        updateAmountSymbol();
       }
       
-      // Trigger conversion
+      // Trigger conversion if both currencies selected
       if ($('#fromCurrency').val() && $('#toCurrency').val()) {
         performConversion();
       }
@@ -554,14 +907,20 @@ function loadCurrencyData() {
   });
 }
 
+/**
+ * Load weather data for country capital
+ */
 function loadWeatherData() {
   if (!currentCountryCode) {
-    $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed').text('Select a country first');
+    $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed')
+      .text('Select a country first');
     return;
   }
   
   $.ajax({
-    url: 'php/getWeather.php', data: {country: currentCountryCode}, dataType: 'json',
+    url: 'php/getWeather.php', 
+    data: {country: currentCountryCode}, 
+    dataType: 'json',
     success: function(data) {
       $('#temperature').text(data.temperature || 'N/A');
       $('#condition').text(data.condition || 'N/A');
@@ -571,58 +930,95 @@ function loadWeatherData() {
       $('#windSpeed').text(data.wind_speed || 'N/A');
     },
     error: function() {
-      $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed').text('Weather data unavailable');
+      $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed')
+        .text('Weather data unavailable');
     }
   });
 }
 
+/**
+ * Load news data with enhanced formatting
+ */
 function loadNewsData() {
   if (!currentCountryCode) {
     $('#newsContent').html('<p class="text-center">Select a country first</p>');
     return;
   }
   
-  $('#newsContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading latest news...</p></div>');
+  $('#newsContent').html(`
+    <div class="text-center">
+      <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+      <p>Loading latest news...</p>
+    </div>
+  `);
   
   $.ajax({
-    url: 'php/getNews.php', data: {country: currentCountryCode}, dataType: 'json',
+    url: 'php/getNews.php', 
+    data: {country: currentCountryCode}, 
+    dataType: 'json',
     success: function(data) {
       if (data?.articles?.length) {
         var html = data.articles.slice(0, 8).map(article => {
-          var authorInfo = article.author ? `<span class="text-muted"> • by ${article.author}</span>` : '';
-          var timeInfo = article.publishedAt ? `<span class="text-muted"> • ${article.publishedAt}</span>` : '';
+          var authorInfo = article.author ? 
+            `<span class="text-muted"> • by ${article.author}</span>` : '';
+          var timeInfo = article.publishedAt ? 
+            `<span class="text-muted"> • ${article.publishedAt}</span>` : '';
           
-          return `<div class="mb-3 pb-3 border-bottom">
-            <h6 class="fw-bold mb-2">${article.title || 'No title'}</h6>
-            <p class="small text-muted mb-2">
-              <i class="fa-solid fa-newspaper me-1"></i>${article.source || 'Unknown source'}${authorInfo}${timeInfo}
-            </p>
-            <p class="mb-2">${article.description || 'No description available'}</p>
-            ${article.url ? `<a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-success">
-              <i class="fa-solid fa-external-link me-1"></i>Read Full Article
-            </a>` : ''}
-          </div>`;
+          return `
+            <div class="mb-3 pb-3 border-bottom">
+              <h6 class="fw-bold mb-2">${article.title || 'No title'}</h6>
+              <p class="small text-muted mb-2">
+                <i class="fa-solid fa-newspaper me-1"></i>
+                ${article.source || 'Unknown source'}${authorInfo}${timeInfo}
+              </p>
+              <p class="mb-2">${article.description || 'No description available'}</p>
+              ${article.url ? `
+                <a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-success">
+                  <i class="fa-solid fa-external-link me-1"></i>Read Full Article
+                </a>
+              ` : ''}
+            </div>
+          `;
         }).join('');
+        
         $('#newsContent').html(html);
       } else {
-        $('#newsContent').html('<p class="text-center"><i class="fa-solid fa-newspaper me-2"></i>No recent news available for this country</p>');
+        $('#newsContent').html(`
+          <p class="text-center">
+            <i class="fa-solid fa-newspaper me-2"></i>
+            No recent news available for this country
+          </p>
+        `);
       }
     },
     error: function(xhr, status, error) {
-      $('#newsContent').html('<p class="text-center text-danger"><i class="fa-solid fa-exclamation-triangle me-2"></i>Failed to load news data</p>');
+      $('#newsContent').html(`
+        <p class="text-center text-danger">
+          <i class="fa-solid fa-exclamation-triangle me-2"></i>
+          Failed to load news data
+        </p>
+      `);
     }
   });
 }
 
+/**
+* Load Wikipedia data with lazy image loading (had to isolate the unsplash API to load only on modal click and independently of the remaining modal content as it was majorly bottlenecking everything it was synced with)
+ */
 function loadWikipediaData() {
   if (!currentCountryCode) {
     $('#wikipediaContent').html('<p class="text-center">Select a country first</p>');
     return;
   }
   
-  $('#wikipediaContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading Wikipedia information...</p></div>');
+  $('#wikipediaContent').html(`
+    <div class="text-center">
+      <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+      <p>Loading Wikipedia information...</p>
+    </div>
+  `);
   
-  // Step 1: Load Wikipedia text quickly (no images)
+  // Load Wikipedia text immediately
   $.ajax({
     url: 'php/getWikipedia.php', 
     data: {country: currentCountryCode},
@@ -630,41 +1026,59 @@ function loadWikipediaData() {
     success: function(data) {
       var html = '';
       
-      // Add Wikipedia content immediately
+      // Add Wikipedia content
       if (data.extract) {
-        html += `<div class="mb-3">
-          <h6 class="fw-bold">About ${data.title || 'this country'}</h6>
-          <p>${data.extract}</p>
-          ${data.url ? `<a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-success">Read Full Article</a>` : ''}
-        </div>`;
+        html += `
+          <div class="mb-3">
+            <h6 class="fw-bold">About ${data.title || 'this country'}</h6>
+            <p>${data.extract}</p>
+            ${data.url ? `
+              <a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-success">
+                Read Full Article
+              </a>
+            ` : ''}
+          </div>
+        `;
       }
       
       // Add images loading section
-      html += `<div class="mb-3">
-        <h6 class="fw-bold">Images</h6>
-        <div id="imagesContainer">
-          <div class="text-center py-3">
-            <i class="fa-solid fa-spinner fa-spin fa-xl text-success mb-2"></i>
-            <p class="small text-muted">Loading country images...</p>
+      html += `
+        <div class="mb-3">
+          <h6 class="fw-bold">Images</h6>
+          <div id="imagesContainer">
+            <div class="text-center py-3">
+              <i class="fa-solid fa-spinner fa-spin fa-xl text-success mb-2"></i>
+              <p class="small text-muted">Loading country images...</p>
+            </div>
           </div>
         </div>
-      </div>`;
+      `;
       
-      $('#wikipediaContent').html(html || '<p class="text-center">No Wikipedia information available for this country</p>');
+      $('#wikipediaContent').html(html || `
+        <p class="text-center">No Wikipedia information available for this country</p>
+      `);
       
-      // Step 2: Load images asynchronously in background the background (this was needed as without lazy loading this on modal click and independently of the text content, it's sluggishness bottlenecked the rest of the app severly)
+      // Load images asynchronously
       loadCountryImages(currentCountryCode);
     },
     error: function() {
-      $('#wikipediaContent').html('<p class="text-center text-danger"><i class="fa-solid fa-exclamation-triangle me-2"></i>Failed to load Wikipedia data</p>');
+      $('#wikipediaContent').html(`
+        <p class="text-center text-danger">
+          <i class="fa-solid fa-exclamation-triangle me-2"></i>
+          Failed to load Wikipedia data
+        </p>
+      `);
     }
   });
 }
 
+/**
+ * Load country images separately
+ */
 function loadCountryImages(countryCode) {
   $.ajax({
     url: 'php/getWikipedia.php', 
-    data: {country: countryCode, images: 'true'}, // Request images specifically
+    data: {country: countryCode, images: 'true'},
     dataType: 'json',
     success: function(data) {
       var imagesHtml = '';
@@ -674,56 +1088,78 @@ function loadCountryImages(countryCode) {
         
         data.images.forEach(img => {
           if (img.type === 'info_card') {
-            // Handle info card for when images aren't available
-            imagesHtml += `<div class="col-12 mb-2">
-              <div class="alert alert-info text-center">
-                <i class="fa-solid fa-info-circle me-1"></i>${img.caption}
+            imagesHtml += `
+              <div class="col-12 mb-2">
+                <div class="alert alert-info text-center">
+                  <i class="fa-solid fa-info-circle me-1"></i>${img.caption}
+                </div>
               </div>
-            </div>`;
+            `;
           } else if (img.url) {
-            // Handle normal images
-            imagesHtml += `<div class="col-6 mb-2">
-              <img src="${img.url}" class="img-fluid rounded" alt="${img.caption || 'Country image'}" 
-                   style="height: 100px; object-fit: cover; width: 100%;"
-                   onerror="this.style.display='none';">
-              ${img.caption ? `<small class="text-muted d-block mt-1">${img.caption}</small>` : ''}
-            </div>`;
+            imagesHtml += `
+              <div class="col-6 mb-2">
+                <img src="${img.url}" class="img-fluid rounded" 
+                     alt="${img.caption || 'Country image'}" 
+                     style="height: 100px; object-fit: cover; width: 100%;"
+                     onerror="this.style.display='none';">
+                ${img.caption ? `
+                  <small class="text-muted d-block mt-1">${img.caption}</small>
+                ` : ''}
+              </div>
+            `;
           }
         });
         
         imagesHtml += '</div>';
       } else {
-        imagesHtml = `<div class="alert alert-info text-center">
-          <i class="fa-solid fa-camera me-1"></i>Images temporarily unavailable for this country
-        </div>`;
+        imagesHtml = `
+          <div class="alert alert-info text-center">
+            <i class="fa-solid fa-camera me-1"></i>
+            Images temporarily unavailable for this country
+          </div>
+        `;
       }
       
-      // Update just the images container
       $('#imagesContainer').html(imagesHtml);
     },
     error: function() {
-      $('#imagesContainer').html(`<div class="alert alert-warning text-center">
-        <i class="fa-solid fa-exclamation-triangle me-1"></i>Failed to load images
-      </div>`);
+      $('#imagesContainer').html(`
+        <div class="alert alert-warning text-center">
+          <i class="fa-solid fa-exclamation-triangle me-1"></i>
+          Failed to load images
+        </div>
+      `);
     }
   });
 }
 
+/**
+ * Load public holidays data
+ */
 function loadHolidaysData() {
   if (!currentCountryCode) {
     $('#holidaysContent').html('<p class="text-center">Select a country first</p>');
     return;
   }
   
-  $('#holidaysContent').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i><p>Loading public holidays...</p></div>');
+  $('#holidaysContent').html(`
+    <div class="text-center">
+      <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+      <p>Loading public holidays...</p>
+    </div>
+  `);
   
   $.ajax({
-    url: 'php/getHolidays.php', data: {country: currentCountryCode}, dataType: 'json',
+    url: 'php/getHolidays.php', 
+    data: {country: currentCountryCode}, 
+    dataType: 'json',
     success: function(data) {
       if (data?.holidays?.length) {
-        var html = `<div class="mb-3">
-          <h6 class="fw-bold">${data.country} - ${new Date().getFullYear()} Public Holidays</h6>
-        </div>`;
+        var html = `
+          <div class="mb-3">
+            <h6 class="fw-bold">${data.country} - ${new Date().getFullYear()} Public Holidays</h6>
+          </div>
+        `;
         
         html += '<div class="list-group">';
         data.holidays.forEach(holiday => {
@@ -734,28 +1170,39 @@ function loadHolidaysData() {
             day: 'numeric' 
           });
           
-          html += `<div class="list-group-item d-flex justify-content-between align-items-start">
-            <div class="ms-2 me-auto">
-              <div class="fw-bold">${holiday.name}</div>
-              <small class="text-muted">${holiday.type}</small>
+          html += `
+            <div class="list-group-item d-flex justify-content-between align-items-start">
+              <div class="ms-2 me-auto">
+                <div class="fw-bold">${holiday.name}</div>
+                <small class="text-muted">${holiday.type}</small>
+              </div>
+              <span class="badge bg-success rounded-pill">${formattedDate}</span>
             </div>
-            <span class="badge bg-success rounded-pill">${formattedDate}</span>
-          </div>`;
+          `;
         });
         html += '</div>';
         
         $('#holidaysContent').html(html);
       } else {
-        $('#holidaysContent').html('<p class="text-center">No holiday information available for this country</p>');
+        $('#holidaysContent').html(`
+          <p class="text-center">No holiday information available for this country</p>
+        `);
       }
     }
   });
 }
 
-// Map click detection
+// ===================================================================
+// MAP CLICK DETECTION & GEOSPATIAL FUNCTIONS
+// ===================================================================
+
+/**
+ * Detect clicked country from map coordinates
+ */
 function detectClickedCountry(latlng, clickPosition) {
   if (!allCountryBorders?.features) return;
   
+  // Sort by bounding box area (smallest first for accuracy)
   var sortedFeatures = allCountryBorders.features.slice().sort((a, b) => {
     return getBoundingBoxArea(a.geometry) - getBoundingBoxArea(b.geometry);
   });
@@ -769,19 +1216,29 @@ function detectClickedCountry(latlng, clickPosition) {
           selectCountry(countryCode, clickPosition);
           return;
         }
-      } catch (error) { continue; }
+      } catch (error) { 
+        continue; 
+      }
     }
   }
 }
 
+/**
+ * Check if point is inside country geometry
+ */
 function isPointInCountry(latlng, geometry) {
-  if (geometry.type === 'Polygon') return isPointInPolygon(latlng, geometry.coordinates);
+  if (geometry.type === 'Polygon') {
+    return isPointInPolygon(latlng, geometry.coordinates);
+  }
   if (geometry.type === 'MultiPolygon') {
     return geometry.coordinates.some(coords => isPointInPolygon(latlng, coords));
   }
   return false;
 }
 
+/**
+ * Point-in-polygon algorithm
+ */
 function isPointInPolygon(latlng, polygonCoords) {
   var coords = polygonCoords[0];
   if (!coords || coords.length < 3) return false;
@@ -796,6 +1253,9 @@ function isPointInPolygon(latlng, polygonCoords) {
   return inside;
 }
 
+/**
+ * Calculate bounding box area for geometry
+ */
 function getBoundingBoxArea(geometry) {
   var bounds = {minLat: 90, maxLat: -90, minLng: 180, maxLng: -180};
   
@@ -810,27 +1270,33 @@ function getBoundingBoxArea(geometry) {
     }
   }
   
-  if (geometry.type === 'Polygon') updateBounds(geometry.coordinates[0]);
-  else if (geometry.type === 'MultiPolygon') geometry.coordinates.forEach(p => updateBounds(p[0]));
+  if (geometry.type === 'Polygon') {
+    updateBounds(geometry.coordinates[0]);
+  } else if (geometry.type === 'MultiPolygon') {
+    geometry.coordinates.forEach(p => updateBounds(p[0]));
+  }
   
   return (bounds.maxLat - bounds.minLat) * (bounds.maxLng - bounds.minLng);
 }
 
-// Auto-location detection
+// ===================================================================
+// AUTO-LOCATION DETECTION SYSTEM
+// ===================================================================
+
+/**
+ * Detect user location and highlight their country
+ */
 function detectUserLocation() {
-  // Check if geolocation is supported
   if (!navigator.geolocation) {
     return;
   }
   
-  // Get user's current position
   navigator.geolocation.getCurrentPosition(
     function(position) {
       const userLat = position.coords.latitude;
       const userLng = position.coords.longitude;
       const userLocation = L.latLng(userLat, userLng);
       
-      // Find which country the user is in
       findUserCountry(userLocation);
     },
     function(error) {
@@ -844,8 +1310,10 @@ function detectUserLocation() {
   );
 }
 
+/**
+ * Find which country the user is currently in
+ */
 function findUserCountry(userLocation) {
-  // Wait for country borders to load if not already loaded
   const checkBorders = () => {
     if (!allCountryBorders?.features) {
       setTimeout(checkBorders, 500);
@@ -864,14 +1332,10 @@ function findUserCountry(userLocation) {
       if (countryCode) {
         try {
           if (isPointInCountry(userLocation, feature.geometry)) {
-            const countryName = feature.properties?.name || countryCode;
-            
-            // Auto-select the user's country
             highlightUserCountry(countryCode, userLocation);
             return;
           }
         } catch (error) {
-          // Continue checking other countries if one fails
           continue;
         }
       }
@@ -883,31 +1347,35 @@ function findUserCountry(userLocation) {
   checkBorders();
 }
 
+/**
+ * Highlight the user's detected country
+ */
 function highlightUserCountry(countryCode, userLocation) {
-  // Wait for countries list to load
   const selectCountryWhenReady = () => {
     if (!allCountries?.length) {
       setTimeout(selectCountryWhenReady, 500);
       return;
     }
     
-    // Set the dropdown to the detected country
+    // Set dropdown to detected country
     $('#countrySelect').val(countryCode);
     
     // Automatically select and highlight the country
     selectCountry(countryCode, userLocation);
     
-    // Show a brief notification
+    // Show notification
     showLocationDetectedMessage(countryCode);
   };
   
   selectCountryWhenReady();
 }
 
+/**
+ * Show location detected notification
+ */
 function showLocationDetectedMessage(countryCode) {
   const countryName = allCountries.find(c => c.code === countryCode)?.name || countryCode;
   
-  // Create a temporary notification
   const notification = $(`
     <div class="alert alert-success alert-dismissible position-fixed" 
          style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; min-width: 300px;">
@@ -925,15 +1393,19 @@ function showLocationDetectedMessage(countryCode) {
   }, 5000);
 }
 
+/**
+ * Handle location not found scenario
+ */
 function showLocationNotFoundMessage(userLocation) {
-  // Still center the map on user location even if country not found
+  // Center map on user location
   map.setView([userLocation.lat, userLocation.lng], 8);
   
-  // Add a marker at user location
+  // Add user location marker
   const userMarker = L.marker([userLocation.lat, userLocation.lng], {
     icon: L.divIcon({
       className: 'user-location-marker',
-      html: '<div style="background: #ff4444; border: 3px solid #fff; border-radius: 50%; width: 20px; height: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+      html: `<div style="background: #ff4444; border: 3px solid #fff; border-radius: 50%; 
+                        width: 20px; height: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>`,
       iconSize: [20, 20],
       iconAnchor: [10, 10]
     })
@@ -958,6 +1430,9 @@ function showLocationNotFoundMessage(userLocation) {
   }, 6000);
 }
 
+/**
+ * Handle geolocation errors
+ */
 function handleGeolocationError(error) {
   let message = '';
   

@@ -1,133 +1,101 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+// Enable error reporting for debugging
+ini_set('display_errors', 0); // Keep off for production
+error_reporting(E_ALL);
 
-function logError($message) {
-    error_log("getAirports.php: " . $message);
-}
+header('Content-Type: application/json; charset=UTF-8');
+header('Access-Control-Allow-Origin: *');
 
 try {
     if (!isset($_GET['country']) || empty($_GET['country'])) {
         throw new Exception('Country code is required');
     }
     
-    $countryCode = strtoupper($_GET['country']);
-    logError("Fetching airports for country: " . $countryCode);
+    $countryCode = strtoupper(trim($_GET['country']));
     
-    // GeoNames API configuration
-    $geonamesUsername = 'thisismypassword'; // Your actual GeoNames username
-    
-    // Fetch real airports from GeoNames API
-    $airports = fetchGeoNamesAirports($countryCode, $geonamesUsername);
-    
-    logError("Airports data prepared for: " . $countryCode . " (" . count($airports) . " airports)");
-    echo json_encode($airports);
+    // Get the airports
+    $airports = getAirportsSimple($countryCode);
+    echo json_encode($airports, JSON_UNESCAPED_UNICODE);
     
 } catch (Exception $e) {
-    logError("Error: " . $e->getMessage());
+    // Return empty array on any error (don't break the app)
     echo json_encode([]);
 }
 
-function fetchGeoNamesAirports($countryCode, $username) {
-    $airports = [];
-    
+function getAirportsSimple($countryCode) {
     try {
-        // GeoNames API URL for airports
+        $username = 'thisismypassword';
+        
+        // API call
         $apiUrl = "http://api.geonames.org/searchJSON?" . http_build_query([
             'country' => $countryCode,
-            'fcode' => 'AIRP', // Airport feature code
+            'fcode' => 'AIRP',
             'orderby' => 'relevance',
-            'maxRows' => 15, // Get up to 15 airports
+            'maxRows' => 15,
             'username' => $username
         ]);
         
-        logError("Calling GeoNames API: " . $apiUrl);
-        
+        // Make request with context
         $context = stream_context_create([
             'http' => [
                 'timeout' => 15,
-                'user_agent' => 'Gazetteer/1.0'
+                'user_agent' => 'Gazetteer/1.0',
+                'method' => 'GET'
             ]
         ]);
         
         $response = file_get_contents($apiUrl, false, $context);
         
         if ($response === false) {
-            throw new Exception('Failed to fetch airports from GeoNames API');
+            return []; // Return empty array if API fails
         }
         
         $data = json_decode($response, true);
         
-        if (!$data) {
-            throw new Exception('Invalid response from GeoNames API');
+        if (!$data || !isset($data['geonames'])) {
+            return []; // Return empty array if no data
         }
         
-        if (isset($data['status'])) {
-            throw new Exception('GeoNames API error: ' . ($data['status']['message'] ?? 'Unknown error'));
-        }
-        
-        if (!isset($data['geonames']) || !is_array($data['geonames'])) {
-            logError("No airports found for country: " . $countryCode);
-            return [];
-        }
-        
-        logError("GeoNames returned " . count($data['geonames']) . " airports");
-        
+        // Process the airports
+        $airports = [];
         foreach ($data['geonames'] as $airport) {
-            // Extract IATA code from name if available
             $name = $airport['name'] ?? $airport['toponymName'] ?? 'Unknown Airport';
-            $code = extractAirportCode($name, $airport);
+            
+            // Gen airport code
+            $code = generateSimpleCode($name);
             
             $airports[] = [
                 'name' => $name,
                 'lat' => floatval($airport['lat'] ?? 0),
                 'lng' => floatval($airport['lng'] ?? 0),
                 'code' => $code,
-                'admin1' => $airport['adminName1'] ?? '', // State/Region
+                'admin1' => $airport['adminName1'] ?? '',
                 'elevation' => intval($airport['elevation'] ?? 0),
                 'country' => $airport['countryName'] ?? ''
             ];
         }
         
-        logError("Processed " . count($airports) . " airports successfully");
         return $airports;
         
     } catch (Exception $e) {
-        logError("GeoNames API error: " . $e->getMessage());
-        // Return empty array if API fails completely
-        return [];
+        return []; // Return empty array on error
     }
 }
 
-function extractAirportCode($name, $airport) {
-    // Try to extract IATA code from name (usually in parentheses)
+function generateSimpleCode($name) {
+    // Extract IATA code if present
     if (preg_match('/\(([A-Z]{3})\)/', $name, $matches)) {
         return $matches[1];
     }
     
-    // Try to extract from toponymName if different
-    if (isset($airport['toponymName']) && $airport['toponymName'] !== $name) {
-        if (preg_match('/\(([A-Z]{3})\)/', $airport['toponymName'], $matches)) {
-            return $matches[1];
-        }
-    }
-    
-    // Check for common airport code patterns
-    if (preg_match('/\b([A-Z]{3})\b/', $name, $matches)) {
-        return $matches[1];
-    }
-    
-    // Generate code from airport name
-    $cleanName = preg_replace('/\b(International|Airport|Field|Airfield|Regional)\b/i', '', $name);
-    $words = preg_split('/\s+/', trim($cleanName));
+    // Generate from name
+    $clean = preg_replace('/[^A-Za-z\s]/', '', $name);
+    $words = explode(' ', trim($clean));
     
     if (count($words) >= 2) {
         return strtoupper(substr($words[0], 0, 2) . substr($words[1], 0, 1));
-    } elseif (count($words) == 1) {
-        return strtoupper(substr($words[0], 0, 3));
     }
     
-    // Last ditch effort: use first 3 letters of name
-    return strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $name), 0, 3));
+    return strtoupper(substr($clean, 0, 3));
 }
 ?>

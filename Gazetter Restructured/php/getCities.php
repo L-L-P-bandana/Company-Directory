@@ -15,9 +15,9 @@ try {
     logError("Fetching cities for country: " . $countryCode);
     
     // GeoNames API configuration
-    $geonamesUsername = 'thisismypassword'; // Your actual GeoNames username
+    $geonamesUsername = 'thisismypassword';
     
-    // Fetch cities from GeoNames API
+    // Fetch cities from GeoNames
     $cities = fetchGeoNamesCities($countryCode, $geonamesUsername);
     
     logError("Cities data prepared for: " . $countryCode . " (" . count($cities) . " cities)");
