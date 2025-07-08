@@ -10,7 +10,7 @@ function logError($message) {
 }
 
 function getCountryCode($properties) {
-    // Try multiple possible ISO code properties in order of preference (Necessary as France and Norway were being stubborn)
+    // Try multiple possible ISO code properties (Necessary as France and Norway were being stubborn)
     $isoProps = [
         'ISO3166-1-Alpha-2',  // Primary
         'ISO_A2',             // Alternative
