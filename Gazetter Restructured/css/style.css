@@ -5,10 +5,22 @@
 .leaflet-grab { cursor: grab !important; }
 .leaflet-interactive { cursor: pointer !important; }
 
+/* Preloader Styles */
+#preloader {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+}
+
+#preloader.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#preloader .spinner-border {
+  animation-duration: 1s;
+}
+
 /* Map Overlay Positioning */
 #selectContainer { top: 15px; left: 100px; width: 200px; z-index: 1010; }
-#searchContainer { top: 15px; right: 150px; width: 250px; z-index: 1011; }
-.search-icon { right: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
 
 /* Leaflet Markers standardisation */
 .country-marker { background: transparent !important; border: none !important; cursor: pointer !important; z-index: 1000; }
@@ -43,29 +55,32 @@
 .port-marker-inner { background: linear-gradient(135deg, #20c997, #17a085); border-radius: 4px; }
 .poi-marker-inner:hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.4); }
 
-/* Leaflet Control Z-Index to prevent unwanted overlapping of elements shoud the user zoom themselves into such focus */
-.leaflet-control-container .leaflet-control-layers,
-.leaflet-control-container .leaflet-control-layers.leaflet-control-layers-expanded { z-index: 1050 !important; }
+/* Marker Cluster Styling */
+.marker-cluster { background-clip: padding-box; border-radius: 20px; }
+.marker-cluster div { width: 30px; height: 30px; margin-left: 5px; margin-top: 5px; text-align: center; border-radius: 15px; font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif; }
+.marker-cluster span { line-height: 30px; }
 
-/* Control Cursors */
-.easy-button-button, .leaflet-control-layers-toggle, .leaflet-control-zoom a { cursor: pointer !important; }
+.city-small { background: rgba(0, 123, 255, 0.6); }
+.city-medium { background: rgba(0, 123, 255, 0.7); }
+.city-large { background: rgba(0, 123, 255, 0.8); }
 
-/* Mobile Responsive */
+.airport-small { background: rgba(253, 126, 20, 0.6); }
+.airport-medium { background: rgba(253, 126, 20, 0.7); }
+.airport-large { background: rgba(253, 126, 20, 0.8); }
+
+.railway-small { background: rgba(255, 193, 7, 0.6); }
+.railway-medium { background: rgba(255, 193, 7, 0.7); }
+.railway-large { background: rgba(255, 193, 7, 0.8); }
+
+.port-small { background: rgba(32, 201, 151, 0.6); }
+.port-medium { background: rgba(32, 201, 151, 0.7); }
+.port-large { background: rgba(32, 201, 151, 0.8); }
+
+/* Responsive Design */
 @media (max-width: 768px) {
-  #selectContainer, #searchContainer { left: 50%; transform: translateX(-50%); width: 90vw; max-width: 300px; }
-  #selectContainer { top: 10px; }
-  #searchContainer { top: 70px; }
-  .marker-inner { width: 40px; height: 40px; }
-  .marker-inner::before { width: 28px; height: 28px; }
-  .marker-inner::after { font-size: 8px; top: 6px; }
-  .poi-marker-inner { width: 18px; height: 18px; font-size: 7px; }
+  #selectContainer { left: 15px; width: 180px; }
 }
+
 @media (max-width: 480px) {
-  #selectContainer, #searchContainer { width: 95vw; max-width: 250px; }
-  #selectContainer { top: 8px; }
-  #searchContainer { top: 60px; }
-  .marker-inner { width: 36px; height: 36px; }
-  .marker-inner::before { width: 24px; height: 24px; }
-  .marker-inner::after { font-size: 7px; top: 5px; }
-  .poi-marker-inner { width: 16px; height: 16px; font-size: 6px; }
+  #selectContainer { left: 10px; width: 150px; }
 }
