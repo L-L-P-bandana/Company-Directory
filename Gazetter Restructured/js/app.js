@@ -914,7 +914,7 @@ function loadWeatherData() {
 }
 
 /**
- * Load news data with enhanced formatting
+ * Load news data
  */
 function loadNewsData() {
   if (!currentCountryCode) {

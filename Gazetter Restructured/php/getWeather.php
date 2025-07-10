@@ -208,7 +208,7 @@ function processForecastData($forecastData) {
         $dayCount++;
     }
     
-    // Ensure we always have 3 days
+    // Ensure 3 days
     while (count($forecast) < 3) {
         $forecast[] = [
             'date' => 'N/A',

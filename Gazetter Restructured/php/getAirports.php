@@ -1,6 +1,5 @@
 <?php
-// Enable error reporting for debugging
-ini_set('display_errors', 0); // Keep off for production
+ini_set('display_errors', 0); 
 error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -18,7 +17,7 @@ try {
     echo json_encode($airports, JSON_UNESCAPED_UNICODE);
     
 } catch (Exception $e) {
-    // Return empty array on any error (don't break the app)
+    // Return empty array on any error
     echo json_encode([]);
 }
 
