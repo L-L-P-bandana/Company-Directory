@@ -14,7 +14,7 @@ try {
     $countryCode = strtoupper($_GET['country']);
     logError("Fetching ports for country: " . $countryCode);
     
-    // GeoNames API configuration
+    // GeoNames API config
     $geonamesUsername = 'thisismypassword';
     
     // Fetch real ports from GeoNames API

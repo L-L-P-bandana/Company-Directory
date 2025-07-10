@@ -6,6 +6,8 @@
 var map, currentCountryCode = '', countryBorder = null, allCountryBorders = null, allCountries = [];
 var visitedCountries = [], maxMarkers = 50;
 var currentCurrencyData = null, globalExchangeRates = null;
+var newsData = [], newsLoaded = 0, maxNewsArticles = 10;
+var appInitialized = false;
 
 // ===================================================================
 // LEAFLET MARKER GROUPS & CLUSTERING
@@ -190,7 +192,77 @@ $(document).ready(function() {
   map.on('click', function(e) {
     detectClickedCountry(e.latlng, e.latlng);
   });
+  
+  setupModalAccessibilityFix();
+  
+  // Hide pre-loader after short delay to ensure map is rendered
+  setTimeout(hidePreLoader, 1500);
 });
+
+function setupModalAccessibilityFix() {
+  $('.modal').on('hide.bs.modal', function(e) {
+    var modal = this;
+    var focusedElement = document.activeElement;
+    
+    if (modal.contains(focusedElement)) {
+      e.preventDefault();
+      focusedElement.blur();
+      
+      setTimeout(function() {
+        if ($('#countrySelect').length && $('#countrySelect').is(':visible')) {
+          $('#countrySelect')[0].focus();
+        } else {
+          document.body.focus();
+        }
+        
+        var modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+          $(modal).off('hide.bs.modal');
+          modalInstance.hide();
+          
+          setTimeout(function() {
+            $(modal).on('hide.bs.modal', arguments.callee);
+          }, 100);
+        }
+      }, 10);
+    }
+  });
+  
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+        var target = mutation.target;
+        var ariaHidden = target.getAttribute('aria-hidden');
+        var focusedElement = document.activeElement;
+        
+        if (ariaHidden === 'true' && target.classList.contains('modal')) {
+          if (target.contains(focusedElement)) {
+            focusedElement.blur();
+            if ($('#countrySelect').length) {
+              $('#countrySelect')[0].focus();
+            } else {
+              document.body.focus();
+            }
+          }
+        }
+      }
+    });
+  });
+  
+  $('.modal').each(function() {
+    observer.observe(this, {
+      attributes: true,
+      attributeFilter: ['aria-hidden']
+    });
+  });
+}
+
+function hidePreLoader() {
+  $('#pre-load').fadeOut(800, function() {
+    $(this).remove();
+    appInitialized = true;
+  });
+}
 
 // ===================================================================
 // CURRENCY CONVERTER SYSTEM
@@ -202,11 +274,12 @@ $(document).ready(function() {
 function setupCurrencyConverter() {
   loadGlobalExchangeRates();
   
-  // Event bindings for real-time conversion
-  $('#convertBtn, #convertAmount, #fromCurrency, #toCurrency')
-    .on('click change input', performConversion);
+  // Debounced conversion function
+  const debouncedConvert = debounce(performConversion, 500);
   
-  $('#fromCurrency').on('change', updateAmountSymbol);
+  // Event bindings for real-time conversion
+  $('#fromAmount').on('input', debouncedConvert);
+  $('#fromCurrency, #toCurrency').on('change', performConversion);
 }
 
 /**
@@ -219,17 +292,16 @@ function loadGlobalExchangeRates() {
     dataType: 'json',
     success: function(data) {
       if (data.error) {
-        console.error('Exchange rate API error:', data.message);
-        $('#convertResult').text('Exchange rates unavailable');
+        showConversionError('Exchange rates unavailable');
         return;
       }
       
       globalExchangeRates = data;
       populateCurrencySelectors(data.currencies);
+      hideConversionError();
     },
     error: function() {
-      console.error('Failed to load exchange rates');
-      $('#convertResult').text('Exchange rates unavailable');
+      showConversionError('Failed to load exchange rates');
     }
   });
 }
@@ -250,55 +322,91 @@ function populateCurrencySelectors(currencies) {
   $('#fromCurrency').html(fromOptions);
   $('#toCurrency').html(toOptions);
   
-  // Set default TO currency to USD
-  $('#toCurrency').val('USD');
+  // Set default currencies
+  $('#fromCurrency').val('USD');
+  $('#toCurrency').val('EUR');
   
   // If current country selected, set FROM to that country's currency
   if (currentCountryCode && currentCurrencyData) {
     $('#fromCurrency').val(currentCurrencyData.code);
-    updateAmountSymbol();
   }
-}
-
-/**
- * Update amount field label with currency symbol
- */
-function updateAmountSymbol() {
-  var fromCode = $('#fromCurrency').val();
-  if (fromCode && globalExchangeRates && globalExchangeRates.currencies) {
-    var fromCurrency = globalExchangeRates.currencies.find(c => c.code === fromCode);
-    if (fromCurrency) {
-      $('#amountLabel').text(`Amount (${fromCode} - ${fromCurrency.symbol})`);
-    }
-  } else {
-    $('#amountLabel').text('Amount');
-  }
+  
+  // Trigger initial conversion
+  performConversion();
 }
 
 /**
  * Perform live currency conversion
  */
 function performConversion() {
-  var amount = parseFloat($('#convertAmount').val()) || 0;
+  var amount = parseFloat($('#fromAmount').val()) || 0;
   var fromCode = $('#fromCurrency').val();
   var toCode = $('#toCurrency').val();
   
-  if (!amount || !fromCode || !toCode || !globalExchangeRates) {
-    $('#convertResult').text('Enter valid amount and select currencies');
+  // Clear previous results
+  $('#toAmount').val('');
+  $('#conversionRate').addClass('d-none');
+  
+  // Validation
+  if (!amount || amount <= 0) {
+    showConversionError('Please enter a valid amount');
     return;
   }
   
-  var fromRate = globalExchangeRates.rates[fromCode] || 1;
-  var toRate = globalExchangeRates.rates[toCode] || 1;
+  if (!fromCode || !toCode) {
+    showConversionError('Please select both currencies');
+    return;
+  }
   
-  // Convert via USD as base currency
-  var usdAmount = fromCode === 'USD' ? amount : amount / fromRate;
-  var result = toCode === 'USD' ? usdAmount : usdAmount * toRate;
+  if (!globalExchangeRates || !globalExchangeRates.rates) {
+    showConversionError('Exchange rates not available');
+    return;
+  }
   
-  var fromSymbol = globalExchangeRates.currencies.find(c => c.code === fromCode)?.symbol || fromCode;
-  var toSymbol = globalExchangeRates.currencies.find(c => c.code === toCode)?.symbol || toCode;
-  
-  $('#convertResult').html(`${toSymbol}${result.toFixed(2)}`);
+  try {
+    var fromRate = globalExchangeRates.rates[fromCode] || 1;
+    var toRate = globalExchangeRates.rates[toCode] || 1;
+    
+    // Convert via USD as base currency
+    var usdAmount = fromCode === 'USD' ? amount : amount / fromRate;
+    var result = toCode === 'USD' ? usdAmount : usdAmount * toRate;
+    
+    // Calculate exchange rate (1 FROM = X TO)
+    var exchangeRate = fromCode === 'USD' ? toRate : toRate / fromRate;
+    
+    // Get currency symbols and names
+    var fromCurrency = globalExchangeRates.currencies.find(c => c.code === fromCode);
+    var toCurrency = globalExchangeRates.currencies.find(c => c.code === toCode);
+    var toSymbol = toCurrency ? toCurrency.symbol : toCode;
+    
+    // Display result
+    $('#toAmount').val(`${toSymbol}${result.toFixed(2)}`);
+    
+    // Display exchange rate
+    $('#rateDisplay').text(`1 ${fromCode} = ${exchangeRate.toFixed(4)} ${toCode}`);
+    $('#conversionRate').removeClass('d-none');
+    
+    hideConversionError();
+    
+  } catch (error) {
+    showConversionError('Conversion failed');
+  }
+}
+
+/**
+ * Show conversion error message
+ */
+function showConversionError(message) {
+  $('#errorMessage').text(message);
+  $('#conversionError').removeClass('d-none');
+  $('#conversionRate').addClass('d-none');
+}
+
+/**
+ * Hide conversion error message
+ */
+function hideConversionError() {
+  $('#conversionError').addClass('d-none');
 }
 
 // ===================================================================
@@ -696,7 +804,7 @@ function loadCountryBorder(countryCode) {
  */
 function loadCountryData() {
   if (!currentCountryCode) {
-    $('#population, #area, #capital, #region, #capitalWiki')
+    $('#capitalCity, #continent, #languages, #currency, #isoAlpha2, #isoAlpha3, #population, #areaInSqKm, #postalCodeFormat')
       .text('Select a country first');
     return;
   }
@@ -706,19 +814,15 @@ function loadCountryData() {
     data: {country: currentCountryCode}, 
     dataType: 'json',
     success: function(data) {
+      $('#capitalCity').text(data.capital || 'N/A');
+      $('#continent').text(data.continent || 'N/A');
+      $('#languages').text(data.languages || 'N/A');
+      $('#currency').text(data.currency || 'N/A');
+      $('#isoAlpha2').text(data.isoAlpha2 || 'N/A');
+      $('#isoAlpha3').text(data.isoAlpha3 || 'N/A');
       $('#population').text(data.population || 'N/A');
-      $('#area').text(data.area || 'N/A');
-      $('#capital').text(data.capital || 'N/A');
-      $('#region').text(data.region || 'N/A');
-      
-      if (data.capital && data.capital !== 'N/A') {
-        $('#capitalWiki').html(
-          `<a href="https://en.wikipedia.org/wiki/${encodeURIComponent(data.capital)}" 
-             target="_blank" class="text-decoration-none">Wikipedia ↗</a>`
-        );
-      } else {
-        $('#capitalWiki').text('N/A');
-      }
+      $('#areaInSqKm').text(data.area || 'N/A');
+      $('#postalCodeFormat').text(data.postalCodeFormat || 'N/A');
     }
   });
 }
@@ -728,8 +832,7 @@ function loadCountryData() {
  */
 function loadCurrencyData() {
   if (!currentCountryCode) {
-    $('#currencyName, #currencyCode, #exchangeRate')
-      .text('Select a country first');
+    showConversionError('Select a country first');
     return;
   }
   
@@ -739,20 +842,15 @@ function loadCurrencyData() {
     dataType: 'json',
     success: function(data) {
       currentCurrencyData = data;
-      $('#currencyName').text(data.name || 'N/A');
-      $('#currencyCode').text(data.code || 'N/A');
-      $('#exchangeRate').text(data.rate || 'N/A');
       
       // Update converter with country currency
-      if (globalExchangeRates && globalExchangeRates.currencies) {
+      if (globalExchangeRates && globalExchangeRates.currencies && data.code) {
         $('#fromCurrency').val(data.code);
-        updateAmountSymbol();
-      }
-      
-      // Trigger conversion if both currencies selected
-      if ($('#fromCurrency').val() && $('#toCurrency').val()) {
         performConversion();
       }
+    },
+    error: function() {
+      showConversionError('Failed to load country currency data');
     }
   });
 }
@@ -762,7 +860,7 @@ function loadCurrencyData() {
  */
 function loadWeatherData() {
   if (!currentCountryCode) {
-    $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed')
+    $('#todayConditions, #todayMaxTemp, #todayMinTemp, #day1Date, #day1MaxTemp, #day1MinTemp, #day2Date, #day2MaxTemp, #day2MinTemp, #lastUpdated')
       .text('Select a country first');
     return;
   }
@@ -772,16 +870,45 @@ function loadWeatherData() {
     data: {country: currentCountryCode}, 
     dataType: 'json',
     success: function(data) {
-      $('#temperature').text(data.temperature || 'N/A');
-      $('#condition').text(data.condition || 'N/A');
-      $('#humidity').text(data.humidity || 'N/A');
-      $('#feelsLike').text(data.feels_like || 'N/A');
-      $('#pressure').text(data.pressure || 'N/A');
-      $('#windSpeed').text(data.wind_speed || 'N/A');
+      if (data.forecast && data.forecast.length >= 3) {
+        var forecast = data.forecast;
+        
+        // Today's weather
+        $('#todayConditions').text(forecast[0].condition || 'N/A');
+        $('#todayIcon').attr('src', forecast[0].icon || '');
+        $('#todayMaxTemp').text(forecast[0].maxTemp || '--');
+        $('#todayMinTemp').text(forecast[0].minTemp || '--');
+        
+        // Day 1 forecast
+        $('#day1Date').text(forecast[1].date || 'Tomorrow');
+        $('#day1Icon').attr('src', forecast[1].icon || '');
+        $('#day1MaxTemp').text(forecast[1].maxTemp || '--');
+        $('#day1MinTemp').text(forecast[1].minTemp || '--');
+        
+        // Day 2 forecast
+        $('#day2Date').text(forecast[2].date || 'Day After');
+        $('#day2Icon').attr('src', forecast[2].icon || '');
+        $('#day2MaxTemp').text(forecast[2].maxTemp || '--');
+        $('#day2MinTemp').text(forecast[2].minTemp || '--');
+        
+        // Update modal title with location
+        $('#weatherModalLabel').text(`Weather - ${data.location || 'Unknown'}`);
+        
+        // Last updated
+        $('#lastUpdated').text(data.lastUpdated || 'Unknown');
+      } else {
+        // Fallback for single day data
+        $('#todayConditions').text(data.condition || 'N/A');
+        $('#todayMaxTemp').text(data.temperature || '--');
+        $('#todayMinTemp').text('--');
+        $('#day1Date, #day2Date').text('N/A');
+        $('#lastUpdated').text('Now');
+      }
     },
     error: function() {
-      $('#temperature, #condition, #humidity, #feelsLike, #pressure, #windSpeed')
-        .text('Weather data unavailable');
+      $('#todayConditions, #day1Date, #day2Date').text('Weather data unavailable');
+      $('#todayMaxTemp, #todayMinTemp, #day1MaxTemp, #day1MinTemp, #day2MaxTemp, #day2MinTemp').text('--');
+      $('#lastUpdated').text('Error');
     }
   });
 }
@@ -795,9 +922,13 @@ function loadNewsData() {
     return;
   }
   
-  $('#newsContent').html(`
-    <div class="text-center">
-      <i class="fa-solid fa-spinner fa-spin fa-2x text-success mb-3"></i>
+  // Reset news state
+  newsData = [];
+  newsLoaded = 0;
+  $('#newsContainer').addClass('d-none');
+  $('#newsContent').removeClass('d-none').html(`
+    <div class="text-center py-4">
+      <i class="fa-solid fa-spinner fa-spin fa-2x text-danger mb-3"></i>
       <p>Loading latest news...</p>
     </div>
   `);
@@ -808,48 +939,148 @@ function loadNewsData() {
     dataType: 'json',
     success: function(data) {
       if (data?.articles?.length) {
-        var html = data.articles.slice(0, 8).map(article => {
-          var authorInfo = article.author ? 
-            `<span class="text-muted"> • by ${article.author}</span>` : '';
-          var timeInfo = article.publishedAt ? 
-            `<span class="text-muted"> • ${article.publishedAt}</span>` : '';
-          
-          return `
-            <div class="mb-3 pb-3 border-bottom">
-              <h6 class="fw-bold mb-2">${article.title || 'No title'}</h6>
-              <p class="small text-muted mb-2">
-                <i class="fa-solid fa-newspaper me-1"></i>
-                ${article.source || 'Unknown source'}${authorInfo}${timeInfo}
-              </p>
-              <p class="mb-2">${article.description || 'No description available'}</p>
-              ${article.url ? `
-                <a href="${article.url}" target="_blank" class="btn btn-sm btn-outline-success">
-                  <i class="fa-solid fa-external-link me-1"></i>Read Full Article
-                </a>
-              ` : ''}
-            </div>
-          `;
-        }).join('');
-        
-        $('#newsContent').html(html);
+        newsData = data.articles;
+        $('#newsContent').addClass('d-none');
+        $('#newsContainer').removeClass('d-none');
+        loadInitialNews();
       } else {
         $('#newsContent').html(`
-          <p class="text-center">
-            <i class="fa-solid fa-newspaper me-2"></i>
-            No recent news available for this country
-          </p>
+          <div class="text-center py-4">
+            <i class="fa-solid fa-newspaper fa-2x text-muted mb-3"></i>
+            <p>No recent news available for this country</p>
+          </div>
         `);
       }
     },
     error: function(xhr, status, error) {
       $('#newsContent').html(`
-        <p class="text-center text-danger">
-          <i class="fa-solid fa-exclamation-triangle me-2"></i>
-          Failed to load news data
-        </p>
+        <div class="text-center py-4 text-danger">
+          <i class="fa-solid fa-exclamation-triangle fa-2x mb-3"></i>
+          <p>Failed to load news data</p>
+        </div>
       `);
     }
   });
+}
+
+/**
+ * Load initial 5 news articles
+ */
+function loadInitialNews() {
+  const articlesToShow = Math.min(5, newsData.length);
+  const initialArticles = newsData.slice(0, articlesToShow);
+  
+  // Clear container
+  $('#scrollableNews').empty();
+  
+  // Load all initial articles into scrollable container
+  initialArticles.forEach(article => {
+    $('#scrollableNews').append(createNewsCard(article));
+  });
+  
+  newsLoaded = articlesToShow;
+  
+  // Show/hide view more button
+  if (newsData.length > 5) {
+    $('#viewMoreContainer').removeClass('d-none');
+    $('#viewMoreBtn').off('click').on('click', loadMoreNews);
+  } else {
+    $('#viewMoreContainer').addClass('d-none');
+  }
+}
+
+/**
+ * Load additional 5 news articles
+ */
+function loadMoreNews() {
+  const remainingArticles = newsData.slice(newsLoaded, newsLoaded + 5);
+  
+  remainingArticles.forEach(article => {
+    $('#scrollableNews').append(createNewsCard(article));
+  });
+  
+  newsLoaded += remainingArticles.length;
+  
+  // Hide view more button after loading second batch
+  $('#viewMoreContainer').addClass('d-none');
+  
+  // Smooth scroll to new content
+  $('#scrollableNews').animate({
+    scrollTop: $('#scrollableNews')[0].scrollHeight
+  }, 300);
+}
+
+/**
+ * Create a news article card
+ */
+function createNewsCard(article) {
+  const defaultImage = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22 viewBox=%220 0 300 200%22%3E%3Crect width=%22300%22 height=%22200%22 fill=%22%23e9ecef%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%236c757d%22%3ENo Image%3C/text%3E%3C/svg%3E';
+  
+  const imageUrl = article.urlToImage || defaultImage;
+  const title = article.title || 'No title available';
+  const description = article.description || 'No description available';
+  const source = article.source?.name || 'Unknown source';
+  const publishedAt = article.publishedAt ? formatNewsDate(article.publishedAt) : '';
+  const url = article.url || '#';
+  
+  return `
+    <div class="col-12 mb-3">
+      <div class="card h-100 shadow-sm">
+        <div class="row g-0">
+          <div class="col-md-4">
+            <img src="${imageUrl}" class="img-fluid rounded-start h-100" 
+                 style="object-fit: cover; min-height: 120px;" 
+                 alt="Article image"
+                 onerror="this.src='${defaultImage}'">
+          </div>
+          <div class="col-md-8">
+            <div class="card-body">
+              <h6 class="card-title mb-2">
+                <a href="${url}" target="_blank" class="text-decoration-none text-dark fw-bold news-card-link">
+                  ${title}
+                </a>
+              </h6>
+              <p class="card-text small text-muted mb-2">
+                <i class="fa-solid fa-building me-1"></i>${source}
+                ${publishedAt ? `<span class="ms-2"><i class="fa-solid fa-clock me-1"></i>${publishedAt}</span>` : ''}
+              </p>
+              <p class="card-text">${description}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Format news article date
+ */
+function formatNewsDate(dateString) {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) {
+      return 'Just now';
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays}d ago`;
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+  } catch (error) {
+    return '';
+  }
 }
 
 /**
@@ -1005,13 +1236,11 @@ function loadHolidaysData() {
     dataType: 'json',
     success: function(data) {
       if (data?.holidays?.length) {
-        var html = `
-          <div class="mb-3">
-            <h6 class="fw-bold">${data.country} - ${new Date().getFullYear()} Public Holidays</h6>
-          </div>
-        `;
+        var countryName = data.country || 'Unknown Country';
+        var currentYear = new Date().getFullYear();
+        $('#holidaysModalLabel').html(`<i class="fa-solid fa-calendar fa-xl me-2"></i>Public Holidays - ${countryName} - ${currentYear}`);
         
-        html += '<div class="list-group">';
+        var html = '<div class="list-group">';
         data.holidays.forEach(holiday => {
           var date = new Date(holiday.date + 'T00:00:00');
           var formattedDate = date.toLocaleDateString('en-US', { 
@@ -1026,7 +1255,7 @@ function loadHolidaysData() {
                 <div class="fw-bold">${holiday.name}</div>
                 <small class="text-muted">${holiday.type}</small>
               </div>
-              <span class="badge bg-success rounded-pill">${formattedDate}</span>
+              <span class="badge bg-secondary rounded-pill">${formattedDate}</span>
             </div>
           `;
         });
@@ -1038,6 +1267,14 @@ function loadHolidaysData() {
           <p class="text-center">No holiday information available for this country</p>
         `);
       }
+    },
+    error: function() {
+      $('#holidaysContent').html(`
+        <p class="text-center text-danger">
+          <i class="fa-solid fa-exclamation-triangle me-2"></i>
+          Failed to load holiday data
+        </p>
+      `);
     }
   });
 }
@@ -1210,8 +1447,8 @@ function highlightUserCountry(countryCode, userLocation) {
     // Set dropdown to detected country
     $('#countrySelect').val(countryCode);
     
-    // Automatically select and highlight the country
-    selectCountry(countryCode, userLocation);
+    // Automatically select and highlight the country (use country center, not user location)
+    selectCountry(countryCode);
     
     // Show notification
     showLocationDetectedMessage(countryCode);
@@ -1247,23 +1484,10 @@ function showLocationDetectedMessage(countryCode) {
  * Handle location not found scenario
  */
 function showLocationNotFoundMessage(userLocation) {
-  // Center map on user location
-  map.setView([userLocation.lat, userLocation.lng], 8);
+  // Center map on user's general area without precise location marker
+  map.setView([userLocation.lat, userLocation.lng], 6);
   
-  // Add user location marker
-  const userMarker = L.marker([userLocation.lat, userLocation.lng], {
-    icon: L.divIcon({
-      className: 'user-location-marker',
-      html: `<div style="background: #ff4444; border: 3px solid #fff; border-radius: 50%; 
-                        width: 20px; height: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    })
-  }).addTo(map);
-  
-  userMarker.bindTooltip('Your location', {permanent: false, direction: 'top'});
-  
-  // Show notification
+  // Show notification without revealing precise coordinates
   const notification = $(`
     <div class="alert alert-info alert-dismissible position-fixed" 
          style="top: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; min-width: 350px;">

@@ -2,17 +2,12 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-function logError($message) {
-    error_log("getCities.php: " . $message);
-}
-
 try {
     if (!isset($_GET['country']) || empty($_GET['country'])) {
         throw new Exception('Country code is required');
     }
     
     $countryCode = strtoupper($_GET['country']);
-    logError("Fetching cities for country: " . $countryCode);
     
     // GeoNames API configuration
     $geonamesUsername = 'thisismypassword';
@@ -20,11 +15,9 @@ try {
     // Fetch cities from GeoNames
     $cities = fetchGeoNamesCities($countryCode, $geonamesUsername);
     
-    logError("Cities data prepared for: " . $countryCode . " (" . count($cities) . " cities)");
     echo json_encode($cities);
     
 } catch (Exception $e) {
-    logError("Error: " . $e->getMessage());
     echo json_encode([]);
 }
 
@@ -40,8 +33,6 @@ function fetchGeoNamesCities($countryCode, $username) {
             'maxRows' => 20, // Get up to 20 cities (avoid clutter)
             'username' => $username
         ]);
-        
-        logError("Calling GeoNames API: " . $apiUrl);
         
         $context = stream_context_create([
             'http' => [
@@ -67,11 +58,8 @@ function fetchGeoNamesCities($countryCode, $username) {
         }
         
         if (!isset($data['geonames']) || !is_array($data['geonames'])) {
-            logError("No cities found for country: " . $countryCode);
             return [];
         }
-        
-        logError("GeoNames returned " . count($data['geonames']) . " cities");
         
         foreach ($data['geonames'] as $city) {
             $cities[] = [
@@ -81,16 +69,12 @@ function fetchGeoNamesCities($countryCode, $username) {
                 'population' => intval($city['population'] ?? 0),
                 'admin1' => $city['adminName1'] ?? '', // State/Region
                 'fcode' => $city['fcode'] ?? '', // Feature code (PPLC=capital, PPL=city, etc.)
-                'country' => $city['countryName'] ?? ''
             ];
         }
         
-        logError("Processed " . count($cities) . " cities successfully");
         return $cities;
         
     } catch (Exception $e) {
-        logError("GeoNames API error: " . $e->getMessage());
-        // Return empty if API botches it
         return [];
     }
 }

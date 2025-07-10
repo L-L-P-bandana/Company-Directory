@@ -12,7 +12,7 @@ try {
     }
     
     $countryCode = strtoupper($_GET['country']);
-    logError("Fetching weather for country: " . $countryCode);
+    logError("Fetching weather forecast for country: " . $countryCode);
     
     // OpenWeatherMap API key
     $apiKey = "633c784df32af33d2e4fbb39d138ce4f";
@@ -53,36 +53,56 @@ try {
     
     logError("Capital city: " . $capital);
     
-    // Get weather data from OpenWeatherMap
-    $weatherData = fetchRealWeatherData($capital, $countryCode, $apiKey);
+    // Get weather forecast data from OpenWeatherMap
+    $forecastData = fetchWeatherForecast($capital, $countryCode, $apiKey);
     
-    logError("Weather data prepared for: " . $capital);
-    echo json_encode($weatherData);
+    logError("Weather forecast data prepared for: " . $capital);
+    echo json_encode($forecastData);
     
 } catch (Exception $e) {
     logError("Error: " . $e->getMessage());
     
-    // NO FALLBACK DATA - return error response
+    // Return error response with fallback structure
     http_response_code(500);
     echo json_encode([
         'error' => 'Weather API unavailable',
         'message' => $e->getMessage(),
-        'temperature' => 'N/A',
-        'condition' => 'Weather data unavailable',
-        'humidity' => 'N/A'
+        'location' => 'Unknown',
+        'lastUpdated' => date('H:i, jS M'),
+        'forecast' => [
+            [
+                'condition' => 'Weather unavailable',
+                'icon' => '',
+                'maxTemp' => '--',
+                'minTemp' => '--'
+            ],
+            [
+                'date' => 'Tomorrow',
+                'icon' => '',
+                'maxTemp' => '--',
+                'minTemp' => '--'
+            ],
+            [
+                'date' => 'Day After',
+                'icon' => '',
+                'maxTemp' => '--',
+                'minTemp' => '--'
+            ]
+        ]
     ]);
 }
 
-function fetchRealWeatherData($city, $countryCode, $apiKey) {
+function fetchWeatherForecast($city, $countryCode, $apiKey) {
     try {
-        // OpenWeatherMap Current Weather API
-        $weatherApiUrl = "https://api.openweathermap.org/data/2.5/weather?" . http_build_query([
+        // OpenWeatherMap 5-day forecast API
+        $forecastApiUrl = "https://api.openweathermap.org/data/2.5/forecast?" . http_build_query([
             'q' => $city . ',' . $countryCode,
             'appid' => $apiKey,
-            'units' => 'metric' // Get temp in Celsius
+            'units' => 'metric', // Get temp in Celsius
+            'cnt' => 24 // Get enough data for 3 days
         ]);
         
-        logError("Calling OpenWeatherMap API: " . $weatherApiUrl);
+        logError("Calling OpenWeatherMap Forecast API: " . $forecastApiUrl);
         
         $context = stream_context_create([
             'http' => [
@@ -91,49 +111,113 @@ function fetchRealWeatherData($city, $countryCode, $apiKey) {
             ]
         ]);
         
-        $response = file_get_contents($weatherApiUrl, false, $context);
+        $response = file_get_contents($forecastApiUrl, false, $context);
         
         if ($response === false) {
-            throw new Exception('Failed to fetch weather data from OpenWeatherMap API');
+            throw new Exception('Failed to fetch forecast data from OpenWeatherMap API');
         }
         
-        $weatherData = json_decode($response, true);
+        $forecastData = json_decode($response, true);
         
-        if (!$weatherData) {
-            throw new Exception('Invalid response from weather API');
+        if (!$forecastData) {
+            throw new Exception('Invalid response from weather forecast API');
         }
         
         // Check for API errors
-        if (isset($weatherData['cod']) && $weatherData['cod'] !== 200) {
-            $errorMessage = isset($weatherData['message']) ? $weatherData['message'] : 'Unknown weather API error';
-            throw new Exception('Weather API error: ' . $errorMessage);
+        if (isset($forecastData['cod']) && $forecastData['cod'] !== "200") {
+            $errorMessage = isset($forecastData['message']) ? $forecastData['message'] : 'Unknown forecast API error';
+            throw new Exception('Weather forecast API error: ' . $errorMessage);
         }
         
-        // Extract weather information
-        $temperature = round($weatherData['main']['temp'] ?? 0);
-        $condition = $weatherData['weather'][0]['description'] ?? 'Unknown';
-        $humidity = $weatherData['main']['humidity'] ?? 0;
-        
-        // Capitalize condition for better display
-        $condition = ucwords($condition);
+        // Process forecast data for 3 days
+        $forecast = processForecastData($forecastData);
         
         $result = [
-            'temperature' => $temperature . '°C',
-            'condition' => $condition,
-            'humidity' => $humidity . '%',
-            'city' => $city,
-            'pressure' => isset($weatherData['main']['pressure']) ? $weatherData['main']['pressure'] . ' hPa' : 'N/A',
-            'wind_speed' => isset($weatherData['wind']['speed']) ? round($weatherData['wind']['speed']) . ' m/s' : 'N/A',
-            'feels_like' => isset($weatherData['main']['feels_like']) ? round($weatherData['main']['feels_like']) . '°C' : 'N/A'
+            'location' => $city,
+            'lastUpdated' => date('H:i, jS M'),
+            'forecast' => $forecast
         ];
         
-        logError("Successfully processed weather data - Temp: " . $result['temperature'] . ", Condition: " . $result['condition']);
+        logError("Successfully processed forecast data - " . count($forecast) . " days");
         return $result;
         
     } catch (Exception $e) {
-        logError("Weather API error: " . $e->getMessage());
-        
+        logError("Weather forecast API error: " . $e->getMessage());
         throw $e;
     }
+}
+
+function processForecastData($forecastData) {
+    $forecast = [];
+    $dailyData = [];
+    
+    // Group forecast by date
+    foreach ($forecastData['list'] as $item) {
+        $date = date('Y-m-d', $item['dt']);
+        
+        if (!isset($dailyData[$date])) {
+            $dailyData[$date] = [
+                'temps' => [],
+                'conditions' => [],
+                'icons' => []
+            ];
+        }
+        
+        $dailyData[$date]['temps'][] = $item['main']['temp'];
+        $dailyData[$date]['conditions'][] = $item['weather'][0]['description'];
+        $dailyData[$date]['icons'][] = $item['weather'][0]['icon'];
+    }
+    
+    $dayCount = 0;
+    foreach ($dailyData as $date => $data) {
+        if ($dayCount >= 3) break;
+        
+        $maxTemp = round(max($data['temps']));
+        $minTemp = round(min($data['temps']));
+        
+        // Get most common condition and icon
+        $conditionCounts = array_count_values($data['conditions']);
+        $condition = array_key_first($conditionCounts);
+        
+        $iconCounts = array_count_values($data['icons']);
+        $icon = array_key_first($iconCounts);
+        $iconUrl = "https://openweathermap.org/img/wn/{$icon}@2x.png";
+        
+        if ($dayCount === 0) {
+            // Today
+            $forecast[] = [
+                'condition' => ucwords($condition),
+                'icon' => $iconUrl,
+                'maxTemp' => $maxTemp,
+                'minTemp' => $minTemp
+            ];
+        } else {
+            // Future days
+            $dayName = $dayCount === 1 ? 
+                date('D jS', strtotime($date)) : 
+                date('D jS', strtotime($date));
+            
+            $forecast[] = [
+                'date' => $dayName,
+                'icon' => $iconUrl,
+                'maxTemp' => $maxTemp,
+                'minTemp' => $minTemp
+            ];
+        }
+        
+        $dayCount++;
+    }
+    
+    // Ensure we always have 3 days
+    while (count($forecast) < 3) {
+        $forecast[] = [
+            'date' => 'N/A',
+            'icon' => '',
+            'maxTemp' => '--',
+            'minTemp' => '--'
+        ];
+    }
+    
+    return $forecast;
 }
 ?>

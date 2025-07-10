@@ -2,81 +2,148 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-function logError($message) {
-    error_log("getWikipedia.php: " . $message);
-}
-
 try {
     if (!isset($_GET['country']) || empty($_GET['country'])) {
         throw new Exception('Country code is required');
     }
     
     $countryCode = strtoupper($_GET['country']);
-    $loadImages = isset($_GET['images']) && $_GET['images'] === 'true';
     
-    logError("Fetching Wikipedia data for country: " . $countryCode . " (Images: " . ($loadImages ? 'YES' : 'NO') . ")");
+    // Check if this is a request for images only
+    $imagesOnly = isset($_GET['images']) && $_GET['images'] === 'true';
     
-    // Get country name from REST Countries API
-    $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
-    
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 10,
-            'user_agent' => 'Gazetteer/1.0'
-        ]
-    ]);
-    
-    $countryResponse = file_get_contents($countryApiUrl, false, $context);
-    
-    if ($countryResponse === false) {
-        throw new Exception('Failed to fetch country data');
-    }
-    
-    $countryData = json_decode($countryResponse, true);
-    
-    if (!$countryData || empty($countryData)) {
-        throw new Exception('Invalid country data');
-    }
-    
-    // Get country name
-    $countryName = isset($countryData[0]['name']['common']) ? $countryData[0]['name']['common'] : 'Unknown';
-    
-    logError("Country name: " . $countryName);
-    
-    // Always fetch Wikipedia data
-    $wikiData = fetchWikipediaData($countryName);
-    
-    // Only fetch images if specifically requested
-    $images = [];
-    if ($loadImages) {
-        logError("Loading images for: " . $countryName);
-        $images = fetchRealCountryImages($countryName);
+    if ($imagesOnly) {
+        $images = fetchCountryImages($countryCode);
+        echo json_encode(['images' => $images]);
     } else {
-        logError("Skipping image loading for: " . $countryName);
+        $wikipediaData = fetchWikipediaData($countryCode);
+        echo json_encode($wikipediaData);
     }
-    
-    $result = [
-        'title' => $countryName,
-        'extract' => $wikiData['extract'] ?? null,
-        'url' => $wikiData['url'] ?? null,
-        'images' => $images,
-        'images_loaded' => $loadImages
-    ];
-    
-    logError("Wikipedia data prepared for: " . $countryName . " (Images loaded: " . ($loadImages ? 'YES' : 'NO') . ")");
-    echo json_encode($result);
     
 } catch (Exception $e) {
-    logError("Error: " . $e->getMessage());
+    echo json_encode([
+        'error' => 'Wikipedia API unavailable',
+        'message' => $e->getMessage(),
+        'title' => 'Country Information',
+        'extract' => 'Wikipedia information is temporarily unavailable. Please try again later.',
+        'url' => 'https://en.wikipedia.org',
+        'images' => []
+    ]);
+}
+
+function fetchWikipediaData($countryCode) {
+    try {
+        // Get country name from REST Countries API
+        $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
+        
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 10,
+                'user_agent' => 'Gazetteer/1.0'
+            ]
+        ]);
+        
+        $countryResponse = file_get_contents($countryApiUrl, false, $context);
+        
+        if ($countryResponse === false) {
+            throw new Exception('Failed to fetch country data');
+        }
+        
+        $countryData = json_decode($countryResponse, true);
+        
+        if (!$countryData || empty($countryData)) {
+            throw new Exception('Invalid country data');
+        }
+        
+        $countryName = $countryData[0]['name']['common'] ?? 'Unknown';
+        
+        // Try multiple Wikipedia search strategies
+        $wikiData = tryWikipediaSearch($countryName, $context);
+        
+        return [
+            'title' => $countryName,
+            'extract' => $wikiData['extract'] ?? generateFallbackExtract($countryName),
+            'url' => $wikiData['url'] ?? "https://en.wikipedia.org/wiki/" . urlencode($countryName)
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'title' => 'Country Information',
+            'extract' => 'Wikipedia information is temporarily unavailable.',
+            'url' => 'https://en.wikipedia.org'
+        ];
+    }
+}
+
+function tryWikipediaSearch($countryName, $context) {
+    // Strategy 1: Try direct page summary
+    $wikiApiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" . urlencode($countryName);
     
-    // Return error response with empty images array
-    echo json_encode(generateFallbackWikipedia($countryCode));
+    $response = @file_get_contents($wikiApiUrl, false, $context);
+    
+    if ($response !== false) {
+        $data = json_decode($response, true);
+        if ($data && isset($data['extract']) && !empty($data['extract'])) {
+            return [
+                'extract' => strlen($data['extract']) > 500 ? substr($data['extract'], 0, 500) . '...' : $data['extract'],
+                'url' => $data['content_urls']['desktop']['page'] ?? ''
+            ];
+        }
+    }
+    
+    // Strategy 2: Try alternative country names
+    $alternativeNames = getAlternativeCountryNames($countryName);
+    
+    foreach ($alternativeNames as $altName) {
+        $altApiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" . urlencode($altName);
+        $response = @file_get_contents($altApiUrl, false, $context);
+        
+        if ($response !== false) {
+            $data = json_decode($response, true);
+            if ($data && isset($data['extract']) && !empty($data['extract'])) {
+                return [
+                    'extract' => strlen($data['extract']) > 500 ? substr($data['extract'], 0, 500) . '...' : $data['extract'],
+                    'url' => $data['content_urls']['desktop']['page'] ?? ''
+                ];
+            }
+        }
+    }
+    
+    // If all strategies fail, return null to trigger fallback
+    return null;
 }
 
-function fetchWikipediaData($countryName) {
+function getAlternativeCountryNames($countryName) {
+    $alternatives = [
+        'United States' => ['United States of America', 'USA', 'US'],
+        'United Kingdom' => ['UK', 'Britain', 'Great Britain'],
+        'Russia' => ['Russian Federation'],
+        'South Korea' => ['Korea', 'Republic of Korea'],
+        'North Korea' => ['Democratic People\'s Republic of Korea'],
+        'Czech Republic' => ['Czechia'],
+        'Congo' => ['Republic of the Congo'],
+        'Myanmar' => ['Burma'],
+        'Iran' => ['Islamic Republic of Iran'],
+        'Syria' => ['Syrian Arab Republic'],
+        'Venezuela' => ['Bolivarian Republic of Venezuela'],
+        'Bolivia' => ['Plurinational State of Bolivia'],
+        'Tanzania' => ['United Republic of Tanzania'],
+        'Moldova' => ['Republic of Moldova'],
+        'Macedonia' => ['North Macedonia'],
+        'Ivory Coast' => ['Côte d\'Ivoire']
+    ];
+    
+    return $alternatives[$countryName] ?? [$countryName];
+}
+
+function generateFallbackExtract($countryName) {
+    return $countryName . " is a sovereign nation with its own unique culture, history, and traditions. The country has developed over centuries and features diverse landscapes and communities. For detailed information about " . $countryName . ", please visit the official Wikipedia page.";
+}
+
+function fetchCountryImages($countryCode) {
     try {
-        // Use Wiki API to get page extract
-        $wikiApiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" . urlencode($countryName);
+        // Get country name from REST Countries API
+        $countryApiUrl = "https://restcountries.com/v3.1/alpha/" . $countryCode;
         
         $context = stream_context_create([
             'http' => [
@@ -85,210 +152,67 @@ function fetchWikipediaData($countryName) {
             ]
         ]);
         
-        $response = file_get_contents($wikiApiUrl, false, $context);
+        $countryResponse = file_get_contents($countryApiUrl, false, $context);
         
-        if ($response === false) {
-            throw new Exception('Failed to fetch Wikipedia data');
-        }
-        
-        $data = json_decode($response, true);
-        
-        if (!$data) {
-            throw new Exception('Invalid Wikipedia response');
-        }
-        
-        $extract = isset($data['extract']) ? $data['extract'] : '';
-        $url = isset($data['content_urls']['desktop']['page']) ? $data['content_urls']['desktop']['page'] : '';
-        
-        // Limit extract length
-        if (strlen($extract) > 500) {
-            $extract = substr($extract, 0, 500) . '...';
-        }
-        
-        return [
-            'extract' => $extract,
-            'url' => $url
-        ];
-        
-    } catch (Exception $e) {
-        logError("Wikipedia API error: " . $e->getMessage());
-        return generateWikipediaFallback($countryName);
-    }
-}
-
-function fetchRealCountryImages($countryName) {
-    try {
-        // Unsplash API
-        $unsplashAccessKey = "XhdrXEeiO87sG1h2gh4JMAzye8kKAK_6mPJbziaAgWk";
-        
-        logError("Fetching images for: " . $countryName);
-        
-        $images = [];
-        
-        // Try Unsplash first (only 2 images to conserve API calls)
-        $images = fetchUnsplashImages($countryName, $unsplashAccessKey, 2);
-        
-        // If Unsplash fails or rate limited, try Wikimedia Commons
-        if (empty($images)) {
-            logError("Unsplash failed, trying Wikimedia Commons");
-            $images = fetchWikimediaImages($countryName);
-        }
-        
-        // If both fail, use this here fallback 
-        if (empty($images)) {
-            logError("All APIs failed, using optimized fallback");
-            $images = generateOptimizedFallbacks($countryName);
-        }
-        
-        logError("Successfully fetched " . count($images) . " images for " . $countryName);
-        return $images;
-        
-    } catch (Exception $e) {
-        logError("Images API error: " . $e->getMessage());
-        return generateOptimizedFallbacks($countryName);
-    }
-}
-
-function fetchUnsplashImages($countryName, $accessKey, $maxImages = 2) {
-    try {
-        if (empty($accessKey)) {
+        if ($countryResponse === false) {
             return [];
         }
         
-        $images = [];
+        $countryData = json_decode($countryResponse, true);
         
-        // To reduce API calls
-        $searchTerms = [
-            $countryName . ' landmarks',
-            $countryName . ' architecture'
-        ];
-        
-        foreach ($searchTerms as $index => $searchTerm) {
-            if ($index >= $maxImages) break;
-            
-            $imageData = fetchSingleUnsplashImage($searchTerm, $accessKey);
-            if ($imageData) {
-                $images[] = $imageData;
-            }
-            
-            // Delay between requests to respect rate limits
-            if ($index < count($searchTerms) - 1) {
-                usleep(500000); // 0.5 seconds
-            }
+        if (!$countryData || empty($countryData)) {
+            return [];
         }
         
-        return $images;
+        $countryName = $countryData[0]['name']['common'] ?? 'Unknown';
         
-    } catch (Exception $e) {
-        logError("Unsplash batch error: " . $e->getMessage());
-        return [];
-    }
-}
-
-function fetchSingleUnsplashImage($searchTerm, $accessKey) {
-    try {
-        $unsplashUrl = "https://api.unsplash.com/search/photos?" . http_build_query([
-            'query' => $searchTerm,
-            'per_page' => 1,
-            'orientation' => 'landscape'
-        ]);
-        
-        logError("Attempting Unsplash API call: " . $unsplashUrl);
-        logError("Using access key: " . substr($accessKey, 0, 10) . "...");
-        
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 10,
-                'header' => [
-                    'Authorization: Client-ID ' . $accessKey,
-                    'User-Agent: Gazetteer/1.0'
+        // Skip images for "Unknown" countries
+        if ($countryName === 'Unknown') {
+            return [
+                [
+                    'type' => 'info_card',
+                    'caption' => 'Country information not available'
                 ]
-            ]
+            ];
+        }
+        
+        // Unsplash API for country images
+        $unsplashApiKey = "XhdrXEeiO87sG1h2gh4JMAzye8kKAK_6mPJbziaAgWk";
+        
+        $unsplashUrl = "https://api.unsplash.com/search/photos?" . http_build_query([
+            'query' => $countryName . ' landmarks',
+            'per_page' => 4,
+            'client_id' => $unsplashApiKey
         ]);
         
-        $response = file_get_contents($unsplashUrl, false, $context);
+        $unsplashResponse = @file_get_contents($unsplashUrl, false, $context);
         
-        if ($response === false) {
-            $error = error_get_last();
-            logError("Unsplash API call failed for: " . $searchTerm . " - Error: " . json_encode($error));
-            return null;
+        if ($unsplashResponse === false) {
+            return [
+                [
+                    'type' => 'info_card',
+                    'caption' => 'Images temporarily unavailable for ' . $countryName
+                ]
+            ];
         }
         
-        logError("Unsplash API response received for: " . $searchTerm . " - Length: " . strlen($response));
+        $unsplashData = json_decode($unsplashResponse, true);
         
-        $data = json_decode($response, true);
-        
-        if (!$data) {
-            logError("Invalid JSON response from Unsplash for: " . $searchTerm);
-            return null;
-        }
-        
-        // Log the response structure for debugging
-        logError("Unsplash response structure: " . json_encode(array_keys($data)));
-        
-        if (isset($data['errors'])) {
-            logError("Unsplash API errors: " . json_encode($data['errors']));
-            return null;
-        }
-        
-        if (!isset($data['results']) || empty($data['results'])) {
-            logError("No Unsplash results for: " . $searchTerm . " - Total: " . ($data['total'] ?? 'unknown'));
-            return null;
-        }
-        
-        $photo = $data['results'][0];
-        logError("Successfully processed Unsplash image for: " . $searchTerm);
-        
-        return [
-            'url' => $photo['urls']['small'] ?? $photo['urls']['regular'] ?? '',
-            'caption' => $searchTerm . ' - Photo by ' . ($photo['user']['name'] ?? 'Unknown') . ' on Unsplash'
-        ];
-        
-    } catch (Exception $e) {
-        logError("Unsplash exception for '" . $searchTerm . "': " . $e->getMessage());
-        return null;
-    }
-}
-
-function fetchWikimediaImages($countryName) {
-    try {
-        // Wikipedia Commons API
-        $searchUrl = "https://commons.wikimedia.org/w/api.php?" . http_build_query([
-            'action' => 'query',
-            'generator' => 'search',
-            'gsrsearch' => $countryName . ' country',
-            'gsrlimit' => 4,
-            'prop' => 'imageinfo',
-            'iiprop' => 'url|size',
-            'iiurlwidth' => 300,
-            'format' => 'json'
-        ]);
-        
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 10,
-                'user_agent' => 'Gazetteer/1.0'
-            ]
-        ]);
-        
-        $response = file_get_contents($searchUrl, false, $context);
-        
-        if ($response === false) {
-            return [];
-        }
-        
-        $data = json_decode($response, true);
-        
-        if (!$data || !isset($data['query']['pages'])) {
-            return [];
+        if (!$unsplashData || !isset($unsplashData['results']) || empty($unsplashData['results'])) {
+            return [
+                [
+                    'type' => 'info_card',
+                    'caption' => 'No images found for ' . $countryName
+                ]
+            ];
         }
         
         $images = [];
-        foreach ($data['query']['pages'] as $page) {
-            if (isset($page['imageinfo'][0]['thumburl'])) {
+        foreach ($unsplashData['results'] as $photo) {
+            if (isset($photo['urls']['small'])) {
                 $images[] = [
-                    'url' => $page['imageinfo'][0]['thumburl'],
-                    'caption' => $countryName . ' - ' . str_replace('File:', '', $page['title'])
+                    'url' => $photo['urls']['small'],
+                    'caption' => $photo['alt_description'] ?? ($countryName . ' - Country image')
                 ];
             }
         }
@@ -296,86 +220,11 @@ function fetchWikimediaImages($countryName) {
         return $images;
         
     } catch (Exception $e) {
-        logError("Wikimedia API error: " . $e->getMessage());
-        return [];
+        return [
+            [
+                'type' => 'info_card',
+                'caption' => 'Images temporarily unavailable'
+            ]
+        ];
     }
 }
-
-function getImageSearchTerms($countryName) {
-    // Enhanced search terms for better image results
-    $baseTerms = [
-        $countryName . ' landmarks',
-        $countryName . ' architecture', 
-        $countryName . ' landscape',
-        $countryName . ' culture'
-    ];
-    
-    // Add capital city for better results
-    $capitalMap = [
-        'United Kingdom' => 'London',
-        'United States' => 'Washington DC',
-        'France' => 'Paris',
-        'Germany' => 'Berlin',
-        'Japan' => 'Tokyo',
-        'China' => 'Beijing',
-        'Italy' => 'Rome',
-        'Spain' => 'Madrid',
-        'Russia' => 'Moscow',
-        'India' => 'Delhi',
-        'Brazil' => 'Brasilia',
-        'Australia' => 'Sydney',
-        'Canada' => 'Ottawa'
-    ];
-    
-    if (isset($capitalMap[$countryName])) {
-        $baseTerms[] = $capitalMap[$countryName];
-    }
-    
-    return $baseTerms;
-}
-
-function generateOptimizedFallbacks($countryName) {
-    // Use Wikipedia/Wikimedia as primary fallback to avoid CORS issues
-    logError("Generating optimized fallbacks for: " . $countryName);
-    
-    $images = fetchWikimediaImages($countryName);
-    
-    if (!empty($images)) {
-        return $images;
-    }
-    
-    return [
-        [
-            'url' => '',
-            'caption' => 'Images temporarily unavailable for ' . $countryName,
-            'type' => 'info_card'
-        ]
-    ];
-}
-
-function generateWikipediaFallback($countryName) {
-    $fallbackTexts = [
-        'This country is located in a specific region of the world and has its own unique culture, history, and traditions.',
-        'The nation has developed over centuries, with influences from various civilizations and cultures.',
-        'It features diverse landscapes, from urban areas to natural environments, each with their own characteristics.',
-        'The country has its own government, economy, and social systems that reflect its particular heritage.',
-        'Tourism, industry, and agriculture may play important roles in the national economy.'
-    ];
-    
-    $randomText = $fallbackTexts[array_rand($fallbackTexts)];
-    
-    return [
-        'extract' => $countryName . ' is a sovereign nation. ' . $randomText . ' For more detailed information, please visit the official Wikipedia page.',
-        'url' => 'https://en.wikipedia.org/wiki/' . urlencode($countryName)
-    ];
-}
-
-function generateFallbackWikipedia($countryCode) {
-    return [
-        'title' => 'Country Information',
-        'extract' => 'Wikipedia information is temporarily unavailable. Please try again later or visit Wikipedia directly for more information about this country.',
-        'url' => 'https://en.wikipedia.org',
-        'images' => []
-    ];
-}
-?>
