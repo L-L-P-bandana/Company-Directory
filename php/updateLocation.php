@@ -3,11 +3,6 @@
 // updateLocation.php
 // ============================================================================
 
-// example use from browser
-// http://localhost/companydirectory/libs/php/updateLocation.php?id=1&name=Updated%20Location
-
-// remove next two lines for production
-
 ini_set('display_errors', 'On');
 error_reporting(E_ALL);
 
@@ -34,9 +29,6 @@ if (mysqli_connect_errno()) {
 	exit;
 
 }	
-
-// SQL statement accepts parameters and so is prepared to avoid SQL injection.
-// $_REQUEST used for development / debugging. Remember to change to $_POST for production
 
 $query = $conn->prepare('UPDATE location SET name=? WHERE id=?');
 
